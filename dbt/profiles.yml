@@ -5,3 +5,7 @@ revenue_leak:
       type: duckdb
       path: "{{ env_var('DUCKDB_PATH', '../warehouse/revenue.duckdb') }}"
       threads: 4
+      settings:
+        # one DuckDB worker: parallel float sums can differ in the last digit between runs,
+        # and every output of this project is meant to be byte-identical on rerun
+        threads: 1

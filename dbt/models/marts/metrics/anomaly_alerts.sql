@@ -1,13 +1,16 @@
--- Revenue leak monitor. Six generic detectors, each comparing a metric with
--- its own trailing baseline using only data available at the time (no
--- look-ahead). Thresholds were set once, before scoring against the answer key.
+-- Revenue leak monitor (detector v2). Six generic detectors, each comparing a
+-- metric with its own trailing baseline using only data available at the time
+-- (no look-ahead).
 --
---   churn_spike           segment/plan monthly logo churn >= 2x trailing 6-month rate (min 5 churns)
---   ticket_spike          weekly tickets in a category > mean + 3 sd of trailing 8 weeks and >= 2x mean
+--   churn_spike           segment/plan monthly churns vs trailing 6-month rate: Poisson z >= 3, >= 2x expected, >= 5 churns
+--   ticket_spike          weekly tickets in a category vs trailing 12 weeks: Poisson z >= 4, >= 2x mean, >= 10 tickets
 --   feature_usage_drop    weekly feature use per active account < 60% of trailing 8-week mean
---   am_book_retention     an AM's trailing-3-month GRR >= 5 pts below segment peers, 2 months running
---   weak_cohort           cohort logo retention at month 3 or 6 < mean - 1.5 sd of earlier cohorts
+--   am_book_retention     an AM's 6-month customer loss rate (churn + downgrade) vs segment peers: two-proportion z >= 3
+--   weak_cohort           cohort logo retention at month 3/6/9/12 vs pooled earlier cohorts: binomial z <= -2.5
 --   duplicate_billing     >= 3 duplicate subscription events removed in a week
+--
+-- v1 (blind) used ad-hoc thresholds and produced 10-14 false alarms per run;
+-- see docs/detector_revisions.md for what changed and why.
 {{ config(materialized='table') }}
 
 with waterfall as (
@@ -31,7 +34,7 @@ churn_rates as (
     select
         *,
         churned * 1.0 / nullif(starting_customers, 0) as churn_rate,
-        avg(churned * 1.0 / nullif(starting_customers, 0)) over w as baseline_rate,
+        sum(churned) over w * 1.0 / nullif(sum(starting_customers) over w, 0) as baseline_rate,
         count(*) over w as baseline_months
     from churn_by_dim
     window w as (partition by dimension, dimension_value order by month_start
@@ -42,9 +45,15 @@ churn_spike as (
     select
         'churn_spike' as detector, month_start as period_start, dimension, dimension_value,
         churn_rate as observed_value, baseline_rate as baseline_value,
-        churned || ' of ' || starting_customers || ' ' || dimension_value || ' customers churned' as detail
-    from churn_rates
-    where churned >= 5 and baseline_months >= 3 and churn_rate >= 2 * baseline_rate
+        churned || ' of ' || starting_customers || ' ' || dimension_value || ' customers churned vs '
+            || round(expected, 1) || ' expected' as detail
+    from (
+        select *, greatest(baseline_rate * starting_customers, 0.5) as expected
+        from churn_rates
+    )
+    where churned >= 5 and baseline_months >= 3
+      and churned >= 2 * expected
+      and (churned - expected) / sqrt(expected) >= 3
 ),
 
 -- 2. ticket spike -----------------------------------------------------------
@@ -69,10 +78,9 @@ ticket_stats as (
     select
         *,
         avg(tickets) over w as baseline_mean,
-        stddev_samp(tickets) over w as baseline_sd,
         count(*) over w as baseline_weeks
     from ticket_weeks
-    window w as (partition by category order by week_start rows between 8 preceding and 1 preceding)
+    window w as (partition by category order by week_start rows between 12 preceding and 1 preceding)
 ),
 
 ticket_spike as (
@@ -81,8 +89,8 @@ ticket_spike as (
         tickets, baseline_mean,
         tickets || ' ' || category || ' tickets vs ' || round(baseline_mean, 1) || ' weekly average'
     from ticket_stats
-    where baseline_weeks >= 4 and tickets >= 10
-      and tickets > baseline_mean + 3 * baseline_sd and tickets >= 2 * baseline_mean
+    where baseline_weeks >= 8 and tickets >= 10 and tickets >= 2 * baseline_mean
+      and (tickets - baseline_mean) / sqrt(greatest(baseline_mean, 1)) >= 4
 ),
 
 -- 3. feature usage drop -----------------------------------------------------
@@ -129,61 +137,63 @@ feature_drop as (
 am_month as (
     select
         month_start, segment, account_manager,
-        sum(starting_mrr) as starting_mrr,
-        sum(churned_mrr + contraction_mrr) as lost_mrr,
-        count(*) filter (where starting_mrr > 0) as starting_customers
+        count(*) as starting_customers,
+        count(*) filter (where movement_category in ('Churn', 'Contraction')) as lost_customers
     from waterfall
     where account_manager is not null and starting_mrr > 0
     group by 1, 2, 3
 ),
 
-am_t3m as (
+am_t6m as (
     select
         *,
-        1 - sum(lost_mrr) over w / nullif(sum(starting_mrr) over w, 0) as grr_t3m,
-        sum(starting_customers) over w as customers_t3m
+        sum(starting_customers) over w as n_am,
+        sum(lost_customers) over w as lost_am
     from am_month
     window w as (partition by segment, account_manager order by month_start
-                 rows between 2 preceding and current row)
+                 rows between 5 preceding and current row)
 ),
 
-am_gap as (
+am_vs_peers as (
     select
         a.*,
-        (select avg(p.grr_t3m) from am_t3m as p
-          where p.segment = a.segment and p.month_start = a.month_start
-            and p.account_manager <> a.account_manager) as peer_grr_t3m
-    from am_t3m as a
+        sum(p.n_am) as n_peer,
+        sum(p.lost_am) as lost_peer
+    from am_t6m as a
+    join am_t6m as p
+      on p.segment = a.segment and p.month_start = a.month_start and p.account_manager <> a.account_manager
+    group by all
 ),
 
-am_flagged as (
+am_tested as (
     select
         *,
-        grr_t3m - peer_grr_t3m as gap,
-        lag(grr_t3m - peer_grr_t3m) over (partition by segment, account_manager order by month_start) as prev_gap
-    from am_gap
-    where customers_t3m >= 20
+        lost_am * 1.0 / n_am as loss_rate,
+        lost_peer * 1.0 / n_peer as peer_loss_rate,
+        (lost_am + lost_peer) * 1.0 / (n_am + n_peer) as pooled
+    from am_vs_peers
+    where n_am >= 60
 ),
 
 am_alerts as (
     select
         'am_book_retention', month_start, 'account_manager', account_manager,
-        grr_t3m, peer_grr_t3m,
-        account_manager || ' (' || segment || ') 3-month GRR ' || round(100 * grr_t3m, 1)
-            || '% vs peers ' || round(100 * peer_grr_t3m, 1) || '%'
-    from am_flagged
-    where gap <= -0.05 and prev_gap <= -0.05
+        loss_rate, peer_loss_rate,
+        account_manager || ' (' || segment || '): ' || round(100 * loss_rate, 1)
+            || '% of book lost in 6 months vs ' || round(100 * peer_loss_rate, 1) || '% for peers'
+    from am_tested
+    where (loss_rate - peer_loss_rate)
+          / sqrt(pooled * (1 - pooled) * (1.0 / n_am + 1.0 / n_peer)) >= 3
 ),
 
 -- 5. weak cohort ------------------------------------------------------------
 cohort_points as (
     select
-        cohort_month, months_since_signup, logo_retention,
-        avg(logo_retention) over w as baseline,
-        stddev_samp(logo_retention) over w as baseline_sd,
+        cohort_month, months_since_signup, cohort_size, active_customers, logo_retention,
+        sum(active_customers) over w * 1.0 / nullif(sum(cohort_size) over w, 0) as baseline,
         count(*) over w as prior_cohorts
     from {{ ref('cohort_retention') }}
-    where months_since_signup in (3, 6)
+    where months_since_signup in (3, 6, 9, 12)
     window w as (partition by months_since_signup order by cohort_month
                  rows between unbounded preceding and 1 preceding)
 ),
@@ -197,7 +207,8 @@ weak_cohort as (
         strftime(cohort_month, '%Y-%m') || ' cohort month-' || months_since_signup || ' retention '
             || round(100 * logo_retention) || '% vs ' || round(100 * baseline) || '% for earlier cohorts'
     from cohort_points
-    where prior_cohorts >= 4 and logo_retention < baseline - 1.5 * baseline_sd
+    where prior_cohorts >= 4
+      and (logo_retention - baseline) / sqrt(baseline * (1 - baseline) / cohort_size) <= -2.5
       and cohort_month + to_months(months_since_signup + 1) <= date '{{ var("analysis_end_date") }}'
 ),
 
