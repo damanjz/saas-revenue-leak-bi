@@ -1,0 +1,37 @@
+table Drivers
+
+	column feature
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: feature
+
+	column feature_label
+		dataType: string
+		summarizeBy: none
+		sourceColumn: feature_label
+
+	column mean_abs_contribution
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		summarizeBy: none
+		sourceColumn: mean_abs_contribution
+
+	partition Drivers = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "feature_importance.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    #"Promoted headers" = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    #"Typed columns" = Table.TransformColumnTypes(
+				        #"Promoted headers",
+				        {
+						{"feature", type text},
+						{"feature_label", type text},
+						{"mean_abs_contribution", type number}
+				        },
+				        "en-US"
+				    )
+				in
+				    #"Typed columns"

@@ -1,0 +1,86 @@
+table Cohorts
+
+	column cohort_month
+		dataType: dateTime
+		formatString: Short Date
+		isHidden
+		summarizeBy: none
+		sourceColumn: cohort_month
+
+	column cohort_label
+		dataType: string
+		sortByColumn: cohort_month
+		summarizeBy: none
+		sourceColumn: cohort_label
+
+	column months_since_signup
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: months_since_signup
+
+	column cohort_size
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: cohort_size
+
+	column cohort_starting_mrr
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		summarizeBy: none
+		sourceColumn: cohort_starting_mrr
+
+	column active_customers
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: active_customers
+
+	column cohort_mrr
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		summarizeBy: none
+		sourceColumn: cohort_mrr
+
+	column logo_retention
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		summarizeBy: none
+		sourceColumn: logo_retention
+
+	column revenue_retention
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		summarizeBy: none
+		sourceColumn: revenue_retention
+
+	partition Cohorts = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "cohort_retention.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    #"Promoted headers" = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    #"Typed columns" = Table.TransformColumnTypes(
+				        #"Promoted headers",
+				        {
+						{"cohort_month", type date},
+						{"cohort_label", type text},
+						{"months_since_signup", Int64.Type},
+						{"cohort_size", Int64.Type},
+						{"cohort_starting_mrr", type number},
+						{"active_customers", Int64.Type},
+						{"cohort_mrr", type number},
+						{"logo_retention", type number},
+						{"revenue_retention", type number}
+				        },
+				        "en-US"
+				    )
+				in
+				    #"Typed columns"

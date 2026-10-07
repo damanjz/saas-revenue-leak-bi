@@ -1,0 +1,115 @@
+table 'MRR Movements'
+
+	column movement_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: movement_id
+
+	column date_key
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: date_key
+
+	column customer_sk
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: customer_sk
+
+	column account_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: account_id
+
+	column movement_date
+		dataType: dateTime
+		formatString: d mmm yyyy
+		summarizeBy: none
+		sourceColumn: movement_date
+
+	column movement_type
+		dataType: string
+		summarizeBy: none
+		sourceColumn: movement_type
+
+	column change_reason
+		dataType: string
+		summarizeBy: none
+		sourceColumn: change_reason
+
+	column plan_id
+		dataType: string
+		summarizeBy: none
+		sourceColumn: plan_id
+
+	column previous_plan_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: previous_plan_id
+
+	column seats
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: seats
+
+	column previous_seats
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: previous_seats
+
+	column mrr_before
+		dataType: double
+		formatString: \$#,0
+		summarizeBy: none
+		sourceColumn: mrr_before
+
+	column mrr_after
+		dataType: double
+		formatString: \$#,0
+		summarizeBy: none
+		sourceColumn: mrr_after
+
+	column mrr_delta
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		summarizeBy: none
+		sourceColumn: mrr_delta
+
+	partition 'MRR Movements' = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "fact_mrr_movements.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    #"Promoted headers" = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    #"Typed columns" = Table.TransformColumnTypes(
+				        #"Promoted headers",
+				        {
+						{"movement_id", type text},
+						{"date_key", Int64.Type},
+						{"customer_sk", Int64.Type},
+						{"account_id", type text},
+						{"movement_date", type date},
+						{"movement_type", type text},
+						{"change_reason", type text},
+						{"plan_id", type text},
+						{"previous_plan_id", type text},
+						{"seats", Int64.Type},
+						{"previous_seats", Int64.Type},
+						{"mrr_before", type number},
+						{"mrr_after", type number},
+						{"mrr_delta", type number}
+				        },
+				        "en-US"
+				    )
+				in
+				    #"Typed columns"

@@ -1,0 +1,125 @@
+table 'Usage Weekly'
+
+	column usage_week_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: usage_week_id
+
+	column week_start_date_key
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: week_start_date_key
+
+	column customer_sk
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: customer_sk
+
+	column account_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: account_id
+
+	column week_start
+		dataType: dateTime
+		formatString: d mmm yy
+		isHidden
+		summarizeBy: none
+		sourceColumn: week_start
+
+	column sessions
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: sessions
+
+	column weekly_active_users
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: weekly_active_users
+
+	column session_minutes
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		summarizeBy: none
+		sourceColumn: session_minutes
+
+	column dashboards_viewed
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: dashboards_viewed
+
+	column reports_run
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: reports_run
+
+	column integrations_synced
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: integrations_synced
+
+	column exports
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: exports
+
+	column api_calls
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: api_calls
+
+	column is_complete_week
+		dataType: boolean
+		isHidden
+		summarizeBy: none
+		sourceColumn: is_complete_week
+
+	partition 'Usage Weekly' = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "fact_product_usage_weekly.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    #"Promoted headers" = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    #"Typed columns" = Table.TransformColumnTypes(
+				        #"Promoted headers",
+				        {
+						{"usage_week_id", type text},
+						{"week_start_date_key", Int64.Type},
+						{"customer_sk", Int64.Type},
+						{"account_id", type text},
+						{"week_start", type date},
+						{"sessions", Int64.Type},
+						{"weekly_active_users", Int64.Type},
+						{"session_minutes", type number},
+						{"dashboards_viewed", Int64.Type},
+						{"reports_run", Int64.Type},
+						{"integrations_synced", Int64.Type},
+						{"exports", Int64.Type},
+						{"api_calls", Int64.Type},
+						{"is_complete_week", type logical}
+				        },
+				        "en-US"
+				    )
+				in
+				    #"Typed columns"

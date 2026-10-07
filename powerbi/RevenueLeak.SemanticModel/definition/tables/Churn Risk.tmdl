@@ -1,0 +1,174 @@
+table 'Churn Risk'
+
+	column account_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: account_id
+
+	column customer_sk
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: customer_sk
+
+	column snapshot_date
+		dataType: dateTime
+		formatString: Short Date
+		isHidden
+		summarizeBy: none
+		sourceColumn: snapshot_date
+
+	column segment
+		dataType: string
+		summarizeBy: none
+		sourceColumn: segment
+
+	column account_manager
+		dataType: string
+		summarizeBy: none
+		sourceColumn: account_manager
+
+	column plan_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: plan_id
+
+	column mrr
+		dataType: double
+		formatString: \$#,0
+		summarizeBy: none
+		sourceColumn: mrr
+
+	column seats
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: seats
+
+	column churn_probability
+		dataType: double
+		formatString: 0%
+		summarizeBy: none
+		sourceColumn: churn_probability
+
+	column risk_rank
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: risk_rank
+
+	column risk_tier
+		dataType: string
+		sortByColumn: risk_tier_order
+		summarizeBy: none
+		sourceColumn: risk_tier
+
+	column mrr_at_risk
+		dataType: double
+		formatString: \$#,0
+		summarizeBy: none
+		sourceColumn: mrr_at_risk
+
+	column driver_1
+		dataType: string
+		summarizeBy: none
+		sourceColumn: driver_1
+
+	column driver_1_impact
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		summarizeBy: none
+		sourceColumn: driver_1_impact
+
+	column driver_2
+		dataType: string
+		summarizeBy: none
+		sourceColumn: driver_2
+
+	column driver_2_impact
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		summarizeBy: none
+		sourceColumn: driver_2_impact
+
+	column driver_3
+		dataType: string
+		summarizeBy: none
+		sourceColumn: driver_3
+
+	column driver_3_impact
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		summarizeBy: none
+		sourceColumn: driver_3_impact
+
+	column model
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: model
+
+	column health_band
+		dataType: string
+		sortByColumn: health_band_order
+		summarizeBy: none
+		sourceColumn: health_band
+
+	column risk_tier_order
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: risk_tier_order
+
+	column health_band_order
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: health_band_order
+
+	partition 'Churn Risk' = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "churn_risk_scores.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    #"Promoted headers" = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    #"Typed columns" = Table.TransformColumnTypes(
+				        #"Promoted headers",
+				        {
+						{"account_id", type text},
+						{"customer_sk", Int64.Type},
+						{"snapshot_date", type date},
+						{"segment", type text},
+						{"account_manager", type text},
+						{"plan_id", type text},
+						{"mrr", type number},
+						{"seats", Int64.Type},
+						{"churn_probability", type number},
+						{"risk_rank", Int64.Type},
+						{"risk_tier", type text},
+						{"mrr_at_risk", type number},
+						{"driver_1", type text},
+						{"driver_1_impact", type number},
+						{"driver_2", type text},
+						{"driver_2_impact", type number},
+						{"driver_3", type text},
+						{"driver_3_impact", type number},
+						{"model", type text},
+						{"health_band", type text},
+						{"risk_tier_order", Int64.Type},
+						{"health_band_order", Int64.Type}
+				        },
+				        "en-US"
+				    )
+				in
+				    #"Typed columns"

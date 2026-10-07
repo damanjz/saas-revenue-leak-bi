@@ -1,0 +1,96 @@
+table Alerts
+
+	column alert_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: alert_id
+
+	column detector
+		dataType: string
+		summarizeBy: none
+		sourceColumn: detector
+
+	column period_start
+		dataType: dateTime
+		formatString: Short Date
+		isHidden
+		summarizeBy: none
+		sourceColumn: period_start
+
+	column detected_at
+		dataType: dateTime
+		formatString: d mmm yyyy
+		summarizeBy: none
+		sourceColumn: detected_at
+
+	column period_date_key
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: period_date_key
+
+	column dimension
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: dimension
+
+	column dimension_value
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: dimension_value
+
+	column observed_value
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		summarizeBy: none
+		sourceColumn: observed_value
+
+	column baseline_value
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		summarizeBy: none
+		sourceColumn: baseline_value
+
+	column detail
+		dataType: string
+		summarizeBy: none
+		sourceColumn: detail
+
+	column recency_rank
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: recency_rank
+
+	partition Alerts = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "anomaly_alerts.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    #"Promoted headers" = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    #"Typed columns" = Table.TransformColumnTypes(
+				        #"Promoted headers",
+				        {
+						{"alert_id", type text},
+						{"detector", type text},
+						{"period_start", type date},
+						{"detected_at", type date},
+						{"period_date_key", Int64.Type},
+						{"dimension", type text},
+						{"dimension_value", type text},
+						{"observed_value", type number},
+						{"baseline_value", type number},
+						{"detail", type text},
+						{"recency_rank", Int64.Type}
+				        },
+				        "en-US"
+				    )
+				in
+				    #"Typed columns"

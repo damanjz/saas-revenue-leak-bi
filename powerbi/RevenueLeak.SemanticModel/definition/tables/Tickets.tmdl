@@ -1,0 +1,168 @@
+table Tickets
+
+	column ticket_id
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: ticket_id
+
+	column created_date_key
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: created_date_key
+
+	column solved_date_key
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: solved_date_key
+
+	column customer_sk
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: customer_sk
+
+	column account_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: account_id
+
+	column created_at
+		dataType: dateTime
+		formatString: d mmm yyyy
+		summarizeBy: none
+		sourceColumn: created_at
+
+	column solved_at
+		dataType: dateTime
+		formatString: General Date
+		isHidden
+		summarizeBy: none
+		sourceColumn: solved_at
+
+	column status
+		dataType: string
+		summarizeBy: none
+		sourceColumn: status
+
+	column priority
+		dataType: string
+		summarizeBy: none
+		sourceColumn: priority
+
+	column channel
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: channel
+
+	column category
+		dataType: string
+		summarizeBy: none
+		sourceColumn: category
+
+	column is_bug
+		dataType: boolean
+		isHidden
+		summarizeBy: none
+		sourceColumn: is_bug
+
+	column first_response_minutes
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: first_response_minutes
+
+	column resolution_hours
+		dataType: double
+		formatString: 0.0
+		summarizeBy: none
+		sourceColumn: resolution_hours
+
+	column first_response_target_minutes
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: first_response_target_minutes
+
+	column resolution_target_hours
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: resolution_target_hours
+
+	column first_response_sla_breached
+		dataType: boolean
+		isHidden
+		summarizeBy: none
+		sourceColumn: first_response_sla_breached
+
+	column resolution_sla_breached
+		dataType: boolean
+		isHidden
+		summarizeBy: none
+		sourceColumn: resolution_sla_breached
+
+	column csat_score
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: csat_score
+
+	column is_invalid_csat
+		dataType: boolean
+		isHidden
+		summarizeBy: none
+		sourceColumn: is_invalid_csat
+
+	column is_invalid_resolution
+		dataType: boolean
+		isHidden
+		summarizeBy: none
+		sourceColumn: is_invalid_resolution
+
+	partition Tickets = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "fact_support_tickets.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    #"Promoted headers" = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    #"Typed columns" = Table.TransformColumnTypes(
+				        #"Promoted headers",
+				        {
+						{"ticket_id", Int64.Type},
+						{"created_date_key", Int64.Type},
+						{"solved_date_key", Int64.Type},
+						{"customer_sk", Int64.Type},
+						{"account_id", type text},
+						{"created_at", type datetime},
+						{"solved_at", type datetime},
+						{"status", type text},
+						{"priority", type text},
+						{"channel", type text},
+						{"category", type text},
+						{"is_bug", type logical},
+						{"first_response_minutes", Int64.Type},
+						{"resolution_hours", type number},
+						{"first_response_target_minutes", Int64.Type},
+						{"resolution_target_hours", Int64.Type},
+						{"first_response_sla_breached", type logical},
+						{"resolution_sla_breached", type logical},
+						{"csat_score", Int64.Type},
+						{"is_invalid_csat", type logical},
+						{"is_invalid_resolution", type logical}
+				        },
+				        "en-US"
+				    )
+				in
+				    #"Typed columns"

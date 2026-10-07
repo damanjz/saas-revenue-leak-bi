@@ -1,0 +1,47 @@
+relationship 224b05c6-8c28-5b6f-a233-644ffac67d3a
+	fromColumn: 'MRR Movements'.date_key
+	toColumn: Date.date_key
+
+relationship b896d167-5686-59f4-83df-70bc83a2f9ae
+	fromColumn: 'MRR Movements'.customer_sk
+	toColumn: Customer.customer_sk
+
+relationship eb63d5c9-2ebf-5c60-861a-f00fe08f50ce
+	fromColumn: 'Usage Weekly'.week_start_date_key
+	toColumn: Date.date_key
+
+relationship b146cc66-ecf2-5980-84b4-db24e017d9fb
+	fromColumn: 'Usage Weekly'.customer_sk
+	toColumn: Customer.customer_sk
+
+relationship 55dad8d9-bc39-50eb-be6d-4ba1e6f3e029
+	fromColumn: Tickets.created_date_key
+	toColumn: Date.date_key
+
+relationship 1c7e2818-e518-537c-a629-b488995aee3a
+	fromColumn: Tickets.customer_sk
+	toColumn: Customer.customer_sk
+
+relationship 8e5cc0ea-4861-5c58-a47b-b5690dcfc150
+	fromColumn: Waterfall.month_date_key
+	toColumn: Date.date_key
+
+relationship 25e3489b-2927-54ca-852a-58faeb63423f
+	fromColumn: Waterfall.customer_sk
+	toColumn: Customer.customer_sk
+
+relationship 946f682b-dc73-5505-a0a6-c34e73dd082f
+	fromColumn: Health.snapshot_date_key
+	toColumn: Date.date_key
+
+relationship fe417fde-0151-5a08-848b-cbf7021120c8
+	fromColumn: Health.customer_sk
+	toColumn: Customer.customer_sk
+
+relationship 9eb7c520-8b26-5fea-8175-08fa7d1256f1
+	fromColumn: Alerts.period_date_key
+	toColumn: Date.date_key
+
+relationship a8b09342-7fad-5a48-afe0-02b26f72a319
+	fromColumn: 'Churn Risk'.customer_sk
+	toColumn: Customer.customer_sk

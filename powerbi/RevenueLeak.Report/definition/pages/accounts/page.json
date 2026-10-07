@@ -1,0 +1,20 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/1.4.0/schema.json",
+  "name": "accounts",
+  "displayName": "Accounts",
+  "displayOption": "FitToPage",
+  "height": 720,
+  "width": 1280,
+  "visualInteractions": [
+    {
+      "source": "f10d6f61e2b2bc6f69c7",
+      "target": "4fa9cab5125f6ec39ae4",
+      "type": "NoFilter"
+    },
+    {
+      "source": "0902fea2dfaf6b60ab78",
+      "target": "4fa9cab5125f6ec39ae4",
+      "type": "NoFilter"
+    }
+  ]
+}

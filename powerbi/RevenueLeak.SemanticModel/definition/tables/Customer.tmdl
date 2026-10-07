@@ -1,0 +1,140 @@
+table Customer
+
+	column customer_sk
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: customer_sk
+
+	column account_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: account_id
+
+	column valid_from
+		dataType: dateTime
+		formatString: Short Date
+		isHidden
+		summarizeBy: none
+		sourceColumn: valid_from
+
+	column valid_to
+		dataType: dateTime
+		formatString: Short Date
+		isHidden
+		summarizeBy: none
+		sourceColumn: valid_to
+
+	column is_current
+		dataType: boolean
+		isHidden
+		summarizeBy: none
+		sourceColumn: is_current
+
+	column company_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: company_name
+
+	column domain
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: domain
+
+	column industry
+		dataType: string
+		summarizeBy: none
+		sourceColumn: industry
+
+	column region
+		dataType: string
+		summarizeBy: none
+		sourceColumn: region
+
+	column segment
+		dataType: string
+		summarizeBy: none
+		sourceColumn: segment
+
+	column employee_count
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: employee_count
+
+	column company_size_band
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: company_size_band
+
+	column cs_tier
+		dataType: string
+		summarizeBy: none
+		sourceColumn: cs_tier
+
+	column acquisition_channel
+		dataType: string
+		summarizeBy: none
+		sourceColumn: acquisition_channel
+
+	column account_manager
+		dataType: string
+		summarizeBy: none
+		sourceColumn: account_manager
+
+	column arr_band
+		dataType: string
+		summarizeBy: none
+		sourceColumn: arr_band
+
+	column first_subscription_date
+		dataType: dateTime
+		formatString: Short Date
+		isHidden
+		summarizeBy: none
+		sourceColumn: first_subscription_date
+
+	column cohort_month
+		dataType: dateTime
+		formatString: Short Date
+		isHidden
+		summarizeBy: none
+		sourceColumn: cohort_month
+
+	partition Customer = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "dim_customers.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    #"Promoted headers" = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    #"Typed columns" = Table.TransformColumnTypes(
+				        #"Promoted headers",
+				        {
+						{"customer_sk", Int64.Type},
+						{"account_id", type text},
+						{"valid_from", type date},
+						{"valid_to", type date},
+						{"is_current", type logical},
+						{"company_name", type text},
+						{"domain", type text},
+						{"industry", type text},
+						{"region", type text},
+						{"segment", type text},
+						{"employee_count", Int64.Type},
+						{"company_size_band", type text},
+						{"cs_tier", type text},
+						{"acquisition_channel", type text},
+						{"account_manager", type text},
+						{"arr_band", type text},
+						{"first_subscription_date", type date},
+						{"cohort_month", type date}
+				        },
+				        "en-US"
+				    )
+				in
+				    #"Typed columns"

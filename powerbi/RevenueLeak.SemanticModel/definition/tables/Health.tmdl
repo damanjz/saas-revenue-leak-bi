@@ -1,0 +1,173 @@
+table Health
+
+	column health_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: health_id
+
+	column account_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: account_id
+
+	column snapshot_date
+		dataType: dateTime
+		formatString: Short Date
+		isHidden
+		summarizeBy: none
+		sourceColumn: snapshot_date
+
+	column snapshot_date_key
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: snapshot_date_key
+
+	column customer_sk
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: customer_sk
+
+	column mrr
+		dataType: double
+		formatString: \$#,0
+		isHidden
+		summarizeBy: none
+		sourceColumn: mrr
+
+	column seats
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: seats
+
+	column sessions_28d
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: sessions_28d
+
+	column sessions_prev_28d
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: sessions_prev_28d
+
+	column adoption_rate_28d
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		summarizeBy: none
+		sourceColumn: adoption_rate_28d
+
+	column tickets_28d
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: tickets_28d
+
+	column high_tickets_28d
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: high_tickets_28d
+
+	column csat_90d
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		summarizeBy: none
+		sourceColumn: csat_90d
+
+	column usage_trend_score
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		summarizeBy: none
+		sourceColumn: usage_trend_score
+
+	column adoption_score
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		summarizeBy: none
+		sourceColumn: adoption_score
+
+	column support_score
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		summarizeBy: none
+		sourceColumn: support_score
+
+	column csat_component_score
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		summarizeBy: none
+		sourceColumn: csat_component_score
+
+	column health_score
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		summarizeBy: none
+		sourceColumn: health_score
+
+	column health_band
+		dataType: string
+		sortByColumn: health_band_order
+		summarizeBy: none
+		sourceColumn: health_band
+
+	column health_band_order
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: health_band_order
+
+	partition Health = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "customer_health_weekly.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    #"Promoted headers" = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    #"Typed columns" = Table.TransformColumnTypes(
+				        #"Promoted headers",
+				        {
+						{"health_id", type text},
+						{"account_id", type text},
+						{"snapshot_date", type date},
+						{"snapshot_date_key", Int64.Type},
+						{"customer_sk", Int64.Type},
+						{"mrr", type number},
+						{"seats", Int64.Type},
+						{"sessions_28d", Int64.Type},
+						{"sessions_prev_28d", Int64.Type},
+						{"adoption_rate_28d", type number},
+						{"tickets_28d", Int64.Type},
+						{"high_tickets_28d", Int64.Type},
+						{"csat_90d", type number},
+						{"usage_trend_score", type number},
+						{"adoption_score", type number},
+						{"support_score", type number},
+						{"csat_component_score", type number},
+						{"health_score", type number},
+						{"health_band", type text},
+						{"health_band_order", Int64.Type}
+				        },
+				        "en-US"
+				    )
+				in
+				    #"Typed columns"

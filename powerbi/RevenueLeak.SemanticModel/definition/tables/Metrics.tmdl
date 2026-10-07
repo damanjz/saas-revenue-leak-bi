@@ -1,0 +1,379 @@
+table Metrics
+
+	/// Monthly recurring revenue at the end of the last month in context.
+	measure MRR = ```
+			VAR m = CALCULATE ( MAX ( Waterfall[month_start] ) )
+			RETURN CALCULATE ( SUM ( Waterfall[ending_mrr] ), Waterfall[month_start] = m )
+			```
+		formatString: \$#,0
+
+	/// Annual run rate: MRR x 12.
+	measure ARR = [MRR] * 12
+		formatString: \$#,0
+
+	/// MRR in millions, for cards (locale-independent).
+	measure 'MRR ($M)' = DIVIDE ( [MRR], 1e6 )
+		formatString: "\$0.00""M"""
+
+	/// ARR in millions, for cards (locale-independent).
+	measure 'ARR ($M)' = DIVIDE ( [ARR], 1e6 )
+		formatString: "\$0.0""M"""
+
+	/// MRR twelve months before the last month in context.
+	measure 'MRR a year earlier' = ```
+			VAR m = CALCULATE ( MAX ( Waterfall[month_start] ) )
+			RETURN CALCULATE ( SUM ( Waterfall[ending_mrr] ), REMOVEFILTERS ( 'Date' ), Waterfall[month_start] = EDATE ( m, -12 ) )
+			```
+		formatString: \$#,0
+
+	/// MRR change over twelve months.
+	measure 'MRR growth (12 m)' = DIVIDE ( [MRR], [MRR a year earlier] ) - 1
+		formatString: 0.0%
+
+	/// Accounts with MRR at the end of the last month in context.
+	measure 'Paying customers' = ```
+			VAR m = CALCULATE ( MAX ( Waterfall[month_start] ) )
+			RETURN CALCULATE ( COUNTROWS ( Waterfall ), Waterfall[month_start] = m, Waterfall[ending_mrr] > 0 )
+			```
+		formatString: #,0
+
+	/// Average MRR per paying account.
+	measure ARPA = DIVIDE ( [MRR], [Paying customers] )
+		formatString: \$#,0
+
+	/// MRR from first-time customers in the period.
+	measure 'New MRR' = SUM ( Waterfall[new_mrr] )
+		formatString: \$#,0
+
+	/// MRR added by existing customers (seats, upgrades, price).
+	measure 'Expansion MRR' = SUM ( Waterfall[expansion_mrr] )
+		formatString: \$#,0
+
+	/// MRR from returning customers.
+	measure 'Reactivation MRR' = SUM ( Waterfall[reactivation_mrr] )
+		formatString: \$#,0
+
+	/// MRR lost to downgrades and seat cuts.
+	measure 'Contraction MRR' = SUM ( Waterfall[contraction_mrr] )
+		formatString: \$#,0
+
+	/// MRR lost to cancellations.
+	measure 'Churned MRR' = SUM ( Waterfall[churned_mrr] )
+		formatString: \$#,0
+
+	/// Contraction as a negative bar.
+	measure Contraction = -[Contraction MRR]
+		formatString: \$#,0
+
+	/// Churn as a negative bar.
+	measure Churn = -[Churned MRR]
+		formatString: \$#,0
+
+	/// New MRR (chart label).
+	measure New = [New MRR]
+		formatString: \$#,0
+
+	/// Expansion MRR (chart label).
+	measure Expansion = [Expansion MRR]
+		formatString: \$#,0
+
+	/// Reactivation MRR (chart label).
+	measure Reactivation = [Reactivation MRR]
+		formatString: \$#,0
+
+	/// All MRR movements in the period, netted.
+	measure 'Net new MRR' = [New MRR] + [Expansion MRR] + [Reactivation MRR] - [Contraction MRR] - [Churned MRR]
+		formatString: \$#,0
+
+	/// MRR lost to downgrades and cancellations.
+	measure 'Lost MRR' = [Contraction MRR] + [Churned MRR]
+		formatString: \$#,0
+
+	/// Net revenue retention, month over month: kept plus expanded MRR from customers paying at the start of each month.
+	measure 'NRR (monthly)' = ```
+			VAR s = SUM ( Waterfall[starting_mrr] )
+			RETURN DIVIDE ( s + [Expansion MRR] - [Contraction MRR] - [Churned MRR], s )
+			```
+		formatString: 0.0%
+
+	/// Gross revenue retention, month over month: MRR kept before any expansion.
+	measure 'GRR (monthly)' = ```
+			VAR s = SUM ( Waterfall[starting_mrr] )
+			RETURN DIVIDE ( s - [Contraction MRR] - [Churned MRR], s )
+			```
+		formatString: 0.0%
+
+	/// Trailing-12-month net revenue retention: MRR today from accounts that paid a year ago, over their MRR then.
+	measure 'NRR (12 m)' = ```
+			VAR m = CALCULATE ( MAX ( Waterfall[month_start] ) )
+			VAR base =
+			    CALCULATETABLE (
+			        VALUES ( Waterfall[account_id] ),
+			        REMOVEFILTERS ( 'Date' ), Waterfall[month_start] = EDATE ( m, -12 ), Waterfall[ending_mrr] > 0
+			    )
+			VAR mrr_then =
+			    CALCULATE ( SUM ( Waterfall[ending_mrr] ), REMOVEFILTERS ( 'Date' ), Waterfall[month_start] = EDATE ( m, -12 ),
+			                Waterfall[ending_mrr] > 0 )
+			VAR mrr_now =
+			    CALCULATE ( SUM ( Waterfall[ending_mrr] ), REMOVEFILTERS ( 'Date' ), Waterfall[month_start] = m,
+			                TREATAS ( base, Waterfall[account_id] ) )
+			RETURN DIVIDE ( mrr_now, mrr_then )
+			```
+		formatString: 0.0%
+
+	/// Share of paying customers who cancel in a month, averaged over the period.
+	measure 'Logo churn (monthly)' = ```
+			DIVIDE (
+			    CALCULATE ( COUNTROWS ( Waterfall ), Waterfall[movement_category] = "Churn" ),
+			    CALCULATE ( COUNTROWS ( Waterfall ), Waterfall[starting_mrr] > 0 )
+			)
+			```
+		formatString: 0.0%
+
+	/// One-line reading of the revenue page.
+	measure 'Insight: revenue' = ```
+			VAR m = CALCULATE ( MAX ( Waterfall[month_start] ) )
+			RETURN
+			    FORMAT ( m, "mmm yyyy" ) & ": MRR " & FORMAT ( [MRR] / 1e6, "$0.00" ) & "M, "
+			        & FORMAT ( [MRR growth (12 m)], "+0%;-0%" ) & " in a year. Churn and downgrades took "
+			        & FORMAT ( [Lost MRR] / 1e3, "$#,0" ) & "K; expansion won back " & FORMAT ( [Expansion MRR] / 1e3, "$#,0" ) & "K." 
+			```
+
+	/// Share of a cohort's customers still paying.
+	measure 'Logo retention' = DIVIDE ( SUM ( Cohorts[active_customers] ), SUM ( Cohorts[cohort_size] ) )
+		formatString: 0%
+
+	/// Cohort MRR now over its first-month MRR.
+	measure 'Revenue retention' = DIVIDE ( SUM ( Cohorts[cohort_mrr] ), SUM ( Cohorts[cohort_starting_mrr] ) )
+		formatString: 0%
+
+	/// Share of customers still paying six months after signing up, across cohorts.
+	measure 'Month-6 logo retention' = CALCULATE ( [Logo retention], Cohorts[months_since_signup] = 6 )
+		formatString: 0%
+
+	/// Cohort MRR twelve months in, over first-month MRR, across cohorts.
+	measure 'Month-12 revenue retention' = CALCULATE ( [Revenue retention], Cohorts[months_since_signup] = 12 )
+		formatString: 0%
+
+	/// Retention as a whole number for the heatmap.
+	measure 'Cohort cell' = FORMAT ( [Logo retention] * 100, "0" )
+
+	/// Heatmap colour: darker means more of the cohort lost.
+	measure 'Cohort colour' = ```
+			VAR i = IF ( ISBLANK ( ( 1 - [Logo retention] ) ), BLANK (), INT ( MIN ( 7, MAX ( 0, DIVIDE ( ( 1 - [Logo retention] ) - 0, 0.45 - 0 ) * 8 ) ) ) )
+			RETURN SWITCH ( TRUE (), ISBLANK ( i ), "#fbfaf7", i = 0, "#f2efe7", i = 1, "#f0e0d6", i = 2, "#ebcbbb", i = 3, "#e3b09a", i = 4, "#d99478", i = 5, "#cd7558", i = 6, "#c0533a", i = 7, "#9c3f2a" )
+			```
+
+	/// Light text on the darkest heatmap cells so every number stays readable.
+	measure 'Cohort text colour' = IF ( ISBLANK ( [Logo retention] ), "#1d2330", IF ( 1 - [Logo retention] >= 0.45 * 5 / 8, "#fbfaf7", "#1d2330" ) )
+
+	/// Distinct users active in the last complete week in context.
+	measure 'Weekly active users' = ```
+			VAR w = CALCULATE ( MAX ( 'Usage Weekly'[week_start] ), 'Usage Weekly'[is_complete_week] = TRUE () )
+			RETURN CALCULATE ( SUM ( 'Usage Weekly'[weekly_active_users] ), 'Usage Weekly'[week_start] = w )
+			```
+		formatString: #,0
+
+	/// Sessions per active account in a week, averaged over the complete weeks in context.
+	measure 'Sessions per account' = ```
+			AVERAGEX (
+			    CALCULATETABLE ( VALUES ( 'Usage Weekly'[week_start] ), 'Usage Weekly'[is_complete_week] = TRUE () ),
+			    CALCULATE ( DIVIDE ( SUM ( 'Usage Weekly'[sessions] ), DISTINCTCOUNT ( 'Usage Weekly'[account_id] ) ) )
+			)
+			```
+		formatString: 0.0
+
+	/// Reports run per active account in a week, averaged over the complete weeks in context.
+	measure 'Reports per account' = ```
+			AVERAGEX (
+			    CALCULATETABLE ( VALUES ( 'Usage Weekly'[week_start] ), 'Usage Weekly'[is_complete_week] = TRUE () ),
+			    CALCULATE ( DIVIDE ( SUM ( 'Usage Weekly'[reports_run] ), DISTINCTCOUNT ( 'Usage Weekly'[account_id] ) ) )
+			)
+			```
+		formatString: 0.0
+
+	/// Dashboards viewed per active account in a week, averaged over the complete weeks in context.
+	measure 'Dashboards per account' = ```
+			AVERAGEX (
+			    CALCULATETABLE ( VALUES ( 'Usage Weekly'[week_start] ), 'Usage Weekly'[is_complete_week] = TRUE () ),
+			    CALCULATE ( DIVIDE ( SUM ( 'Usage Weekly'[dashboards_viewed] ), DISTINCTCOUNT ( 'Usage Weekly'[account_id] ) ) )
+			)
+			```
+		formatString: 0.0
+
+	/// Support tickets created.
+	measure Tickets = COUNTROWS ( Tickets )
+		formatString: #,0
+
+	/// Average satisfaction score, 1 to 5.
+	measure 'Average CSAT' = AVERAGE ( Tickets[csat_score] )
+		formatString: 0.00
+
+	/// Share of solved tickets resolved later than the priority's SLA.
+	measure 'Resolution SLA breached' = ```
+			DIVIDE (
+			    CALCULATE ( COUNTROWS ( Tickets ), Tickets[resolution_sla_breached] = TRUE () ),
+			    CALCULATE ( COUNTROWS ( Tickets ), NOT ISBLANK ( Tickets[resolution_hours] ) )
+			)
+			```
+		formatString: 0.0%
+
+	/// Paying accounts in the latest weekly health snapshot in context.
+	measure 'Health accounts' = ```
+			VAR d = CALCULATE ( MAX ( Health[snapshot_date] ) )
+			RETURN CALCULATE ( COUNTROWS ( Health ), Health[snapshot_date] = d )
+			```
+		formatString: #,0
+
+	/// One-line reading of the cohort page.
+	measure 'Insight: cohorts' = ```
+			VAR weak = CALCULATE ( [Logo retention], Cohorts[months_since_signup] = 9, Cohorts[cohort_label] IN { "2025-04", "2025-05" } )
+			VAR rest = CALCULATE ( [Logo retention], Cohorts[months_since_signup] = 9, NOT Cohorts[cohort_label] IN { "2025-04", "2025-05" } )
+			RETURN
+			    FORMAT ( [Month-6 logo retention], "0%" ) & " still pay at month 6. Apr-May 2025 cohorts: "
+			        & FORMAT ( weak, "0%" ) & " at month 9, vs " & FORMAT ( rest, "0%" ) & " for the rest." 
+			```
+
+	/// Active accounts scored by the churn model.
+	measure Accounts = COUNTROWS ( 'Churn Risk' )
+		formatString: #,0
+
+	/// MRR of the scored accounts.
+	measure 'Book MRR' = SUM ( 'Churn Risk'[mrr] )
+		formatString: \$#,0
+
+	/// High-risk MRR in thousands, for cards.
+	measure 'High-risk MRR ($K)' = DIVIDE ( [High-risk MRR], 1e3 )
+		formatString: "\$0.0""K"""
+
+	/// Expected loss in thousands, for cards.
+	measure 'Expected MRR at risk ($K)' = DIVIDE ( [Expected MRR at risk], 1e3 )
+		formatString: "\$0.0""K"""
+
+	/// Accounts in the riskiest 10% of the book.
+	measure 'High-risk accounts' = CALCULATE ( COUNTROWS ( 'Churn Risk' ), 'Churn Risk'[risk_tier] = "High" )
+		formatString: #,0
+
+	/// MRR held by the riskiest 10% of accounts.
+	measure 'High-risk MRR' = CALCULATE ( SUM ( 'Churn Risk'[mrr] ), 'Churn Risk'[risk_tier] = "High" )
+		formatString: \$#,0
+
+	/// MRR x 60-day churn probability, summed: the MRR the model expects to lose.
+	measure 'Expected MRR at risk' = SUM ( 'Churn Risk'[mrr_at_risk] )
+		formatString: \$#,0
+
+	/// Accounts in the At Risk health band in the latest snapshot.
+	measure 'At-risk health accounts' = ```
+			VAR d = CALCULATE ( MAX ( Health[snapshot_date] ) )
+			RETURN CALCULATE ( COUNTROWS ( Health ), Health[snapshot_date] = d, Health[health_band] = "At Risk" ) + 0
+			```
+		formatString: #,0
+
+	/// How much more often the top 10% flagged accounts churned than average, out of time.
+	measure 'Model lift' = CALCULATE ( MAX ( 'Model Metrics'[lift_top_10pct] ), 'Model Metrics'[selected] = TRUE () )
+		formatString: "0.0""x"""
+
+	/// MRR and account count for a cell of the action matrix.
+	measure 'Matrix cell' = FORMAT ( [Book MRR] / 1e3, "$0" ) & "K  ·  " & FORMAT ( [Accounts], "0" )
+
+	/// Action matrix colour by MRR.
+	measure 'Matrix colour' = ```
+			VAR i = IF ( ISBLANK ( [Book MRR] ), BLANK (), INT ( MIN ( 7, MAX ( 0, DIVIDE ( [Book MRR] - 0, 450000 - 0 ) * 8 ) ) ) )
+			RETURN SWITCH ( TRUE (), ISBLANK ( i ), "#fbfaf7", i = 0, "#f2efe7", i = 1, "#dfe2ea", i = 2, "#c6cee2", i = 3, "#a6b5d8", i = 4, "#8299cb", i = 5, "#5d7cbe", i = 6, "#3f62b4", i = 7, "#2a4a96" )
+			```
+
+	/// Light text on the darkest action-matrix cells.
+	measure 'Matrix text colour' = IF ( [Book MRR] >= 450000 * 5 / 8, "#fbfaf7", "#1d2330" )
+
+	/// Rank by expected MRR loss within the current slicer selection; the call list shows the top 8.
+	measure 'Call rank' = ```
+			-- rank against every row the visual could show: clear the row's own column filters
+			-- (ALLSELECTED on the table) and the company-name row filter that reaches it through Customer
+			IF (
+			    HASONEVALUE ( 'Churn Risk'[account_id] ),
+			    RANKX (
+			        CALCULATETABLE ( ALLSELECTED ( 'Churn Risk' ), ALLSELECTED ( Customer[company_name] ) ),
+			        'Churn Risk'[mrr_at_risk], [Expected MRR at risk], DESC, Dense
+			    )
+			)
+			```
+		formatString: 0
+
+	/// Alerts raised by the revenue leak monitor.
+	measure 'Leak alerts' = COUNTROWS ( Alerts )
+		formatString: #,0
+
+	/// Average absolute contribution to the churn score.
+	measure 'Driver weight' = SUM ( Drivers[mean_abs_contribution] )
+		formatString: 0.000
+
+	/// Composite health score, 0 to 100.
+	measure 'Health score' = AVERAGE ( Health[health_score] )
+		formatString: 0
+
+	/// Product sessions.
+	measure Sessions = SUM ( 'Usage Weekly'[sessions] )
+		formatString: #,0
+
+	/// Distinct users active in the week.
+	measure 'Active users' = SUM ( 'Usage Weekly'[weekly_active_users] )
+		formatString: #,0
+
+	/// Model probability of churning in the next 60 days.
+	measure 'Churn probability' = MAX ( 'Churn Risk'[churn_probability] )
+		formatString: 0%
+
+	/// Selected account with its segment and account manager.
+	measure 'Account heading' = ```
+			VAR n = SELECTEDVALUE ( Customer[company_name], "Pick one account" )
+			VAR sg = SELECTEDVALUE ( 'Churn Risk'[segment] )
+			VAR am = SELECTEDVALUE ( 'Churn Risk'[account_manager] )
+			RETURN n & IF ( NOT ISBLANK ( sg ), "  ·  " & sg & ", managed by " & am, "  ·  not currently paying" )
+			```
+
+	/// MRR of the selected account, latest month.
+	measure 'Account MRR' = [MRR]
+		formatString: \$#,0
+
+	/// 1 = newest ticket in the current selection; the ticket log shows the newest 6.
+	measure 'Ticket recency' = ```
+			IF ( HASONEVALUE ( Tickets[ticket_id] ),
+			     RANKX ( ALLSELECTED ( Tickets ), Tickets[ticket_id], MAX ( Tickets[ticket_id] ), DESC, Dense ) )
+			```
+		formatString: 0
+
+	/// 1 = latest MRR change in the current selection; the ledger shows the latest 6.
+	measure 'Ledger recency' = ```
+			IF ( HASONEVALUE ( 'MRR Movements'[movement_id] ),
+			     RANKX ( ALLSELECTED ( 'MRR Movements' ), 'MRR Movements'[date_key], MAX ( 'MRR Movements'[date_key] ), DESC, Dense ) )
+			```
+		formatString: 0
+
+	/// Top drivers of the selected account's churn score, in plain words.
+	measure 'Account reasons' = ```
+			VAR d1 = SELECTEDVALUE ( 'Churn Risk'[driver_1] )
+			VAR d2 = SELECTEDVALUE ( 'Churn Risk'[driver_2] )
+			VAR d3 = SELECTEDVALUE ( 'Churn Risk'[driver_3] )
+			RETURN
+			    IF ( ISBLANK ( d1 ), "No current churn score (account not paying at the end of the data).",
+			         "Why the model flags it: " & d1 & IF ( NOT ISBLANK ( d2 ), "; " & d2 ) & IF ( NOT ISBLANK ( d3 ), "; " & d3 ) & "." )
+			```
+
+	/// One-line reading of the accounts page.
+	measure 'Insight: accounts' = ```
+			VAR high_loss = CALCULATE ( SUM ( 'Churn Risk'[mrr_at_risk] ), 'Churn Risk'[risk_tier] = "High" )
+			RETURN
+			    [High-risk accounts] & " high-risk accounts, " & FORMAT ( [High-risk MRR] / 1e3, "$#,0" ) & "K MRR, "
+			        & FORMAT ( high_loss / 1e3, "$#,0" ) & "K expected to churn in 60 days. Flagged: "
+			        & FORMAT ( [Model lift], "0.0" ) & "x churn rate." 
+			```
+
+	column Value
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: [Value]
+
+	partition Metrics = calculated
+		mode: import
+		source = { 1 }

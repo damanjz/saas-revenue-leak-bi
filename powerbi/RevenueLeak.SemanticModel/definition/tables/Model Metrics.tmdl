@@ -1,0 +1,126 @@
+table 'Model Metrics'
+
+	column model
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: model
+
+	column roc_auc
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		summarizeBy: none
+		sourceColumn: roc_auc
+
+	column pr_auc
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		summarizeBy: none
+		sourceColumn: pr_auc
+
+	column brier
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		summarizeBy: none
+		sourceColumn: brier
+
+	column base_rate
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		summarizeBy: none
+		sourceColumn: base_rate
+
+	column precision_top_10pct
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		summarizeBy: none
+		sourceColumn: precision_top_10pct
+
+	column recall_top_10pct
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		summarizeBy: none
+		sourceColumn: recall_top_10pct
+
+	column lift_top_10pct
+		dataType: double
+		formatString: #,0.00
+		isHidden
+		summarizeBy: none
+		sourceColumn: lift_top_10pct
+
+	column test_rows
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: test_rows
+
+	column test_churners
+		dataType: int64
+		formatString: 0
+		isHidden
+		summarizeBy: none
+		sourceColumn: test_churners
+
+	column selected
+		dataType: boolean
+		isHidden
+		summarizeBy: none
+		sourceColumn: selected
+
+	column train_end
+		dataType: dateTime
+		formatString: Short Date
+		isHidden
+		summarizeBy: none
+		sourceColumn: train_end
+
+	column test_start
+		dataType: dateTime
+		formatString: Short Date
+		isHidden
+		summarizeBy: none
+		sourceColumn: test_start
+
+	column test_end
+		dataType: dateTime
+		formatString: Short Date
+		isHidden
+		summarizeBy: none
+		sourceColumn: test_end
+
+	partition 'Model Metrics' = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "model_metrics.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    #"Promoted headers" = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    #"Typed columns" = Table.TransformColumnTypes(
+				        #"Promoted headers",
+				        {
+						{"model", type text},
+						{"roc_auc", type number},
+						{"pr_auc", type number},
+						{"brier", type number},
+						{"base_rate", type number},
+						{"precision_top_10pct", type number},
+						{"recall_top_10pct", type number},
+						{"lift_top_10pct", type number},
+						{"test_rows", Int64.Type},
+						{"test_churners", Int64.Type},
+						{"selected", type logical},
+						{"train_end", type date},
+						{"test_start", type date},
+						{"test_end", type date}
+				        },
+				        "en-US"
+				    )
+				in
+				    #"Typed columns"

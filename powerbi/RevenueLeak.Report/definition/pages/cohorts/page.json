@@ -1,0 +1,20 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/1.4.0/schema.json",
+  "name": "cohorts",
+  "displayName": "Cohorts",
+  "displayOption": "FitToPage",
+  "height": 720,
+  "width": 1280,
+  "visualInteractions": [
+    {
+      "source": "e425680f605564b65c6d",
+      "target": "ec6f662e5f2111fb5e3b",
+      "type": "NoFilter"
+    },
+    {
+      "source": "8003ebfb02c43c57ed45",
+      "target": "ec6f662e5f2111fb5e3b",
+      "type": "NoFilter"
+    }
+  ]
+}
