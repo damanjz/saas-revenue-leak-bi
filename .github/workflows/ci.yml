@@ -1,0 +1,20 @@
+name: pipeline
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Pipeline at quarter scale (simulate, dbt build and tests, churn model, exports, scorecard)
+        run: python pipeline.py --scale 0.25
+      - name: Mutation test (each deliberate breakage must fail a dbt test)
+        run: python scripts/mutation_test.py
