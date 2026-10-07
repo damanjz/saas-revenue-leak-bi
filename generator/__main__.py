@@ -41,7 +41,9 @@ def main():
     key.mkdir(parents=True, exist_ok=True)
 
     for name, fname in RAW_FILES.items():
-        frames[name].to_csv(raw / fname, index=False)
+        # mtime=0 keeps the gzip header free of timestamps, so reruns are byte-identical
+        compression = {"method": "gzip", "mtime": 0} if fname.endswith(".gz") else None
+        frames[name].to_csv(raw / fname, index=False, compression=compression)
 
     frames["churn_truth"].to_csv(key / "churn_truth.csv", index=False)
     frames["account_truth"].to_csv(key / "account_truth.csv", index=False)

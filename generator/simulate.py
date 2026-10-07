@@ -428,7 +428,7 @@ class Simulation:
                 slow = res_h / C.SLA_HOURS[priority]
                 csat = None
                 if answered:
-                    score = 1 + 4 * (0.25 + 0.6 * h - 0.18 * min(slow, 2.5) - (0.15 if is_bug else 0)) + rng.normal(0, 0.6)
+                    score = 1 + 4 * (0.40 + 0.55 * h - 0.12 * min(slow, 2.5) - (0.15 if is_bug else 0)) + rng.normal(0, 0.6)
                     csat = int(np.clip(round(score), 1, 5))
                 still_open = day + timedelta(seconds=float(solved)) > C.END + timedelta(days=1)
                 self._ticket_seq += 1

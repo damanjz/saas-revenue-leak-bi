@@ -52,6 +52,7 @@ def main():
     step("2. dbt build (models + tests)", [dbt, "build", "--profiles-dir", "."], cwd=ROOT / "dbt", env=dbt_env)
     step("3. churn model", [sys.executable, "ml/churn_model.py", "--db", str(db)])
     step("4. Power BI exports", [sys.executable, "scripts/export_marts.py", "--db", str(db)])
+    step("4b. Power BI project", [sys.executable, "powerbi/build_pbip.py", "--db", str(db)])
     step("5. scorecard", [sys.executable, "scorecard/score.py", "--db", str(db)])
 
 
