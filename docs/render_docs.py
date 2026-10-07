@@ -179,7 +179,7 @@ def main():
     if missing:
         raise SystemExit(f"unfilled tokens: {missing}")
     html = re.sub(r"\{\{(\w+)\}\}", lambda mt: str(t[mt.group(1)]), html)
-    (DOCS / "case-study.html").write_text(html, encoding="utf-8")
+    (DOCS / "case-study.html").write_text(html, encoding="utf-8", newline="\n")
     print(f"wrote docs/case-study.html ({len(t)} figures from the warehouse)")
     for k in ("mrr_end", "nrr_t12m", "incidents_found", "false_alarms", "roc", "lift", "ew_model", "ew_lead"):
         print(f"  {k:16s} {t[k]}")

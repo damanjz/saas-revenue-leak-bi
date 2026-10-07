@@ -54,7 +54,7 @@ def main():
         "planted_am_neglect_name": sim.am_names[next(i for i in C.INCIDENTS if i.kind == "am_neglect").params["am_index"]],
         "incidents": [{**asdict(i), "start": i.start.isoformat(), "end": i.end.isoformat()} for i in C.INCIDENTS],
         "data_quality_injections": dq_log,
-    }, indent=2))
+    }, indent=2), encoding="utf-8", newline="\n")
 
     print(f"accounts: {sim.n:,}   ({time.time() - t0:.1f}s)")
     for name, fname in RAW_FILES.items():

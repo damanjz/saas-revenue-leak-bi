@@ -251,7 +251,7 @@ def write_report(path: Path, incidents, episodes, dq, ew, metrics, key):
         hl = "" if pd.isna(r.health_median_lead_days) else int(r.health_median_lead_days)
         lines.append(f"| {r.true_cause} | {int(r.churns)} | {fmt_pct(r.model_caught)} | {ml} | "
                      f"{fmt_pct(r.health_caught)} | {hl} | {fmt_pct(r.either_caught)} |")
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
 
 
 def main():

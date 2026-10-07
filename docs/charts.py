@@ -69,7 +69,7 @@ def detection(con, key):
     out.append(f'<circle cx="{left + 130}" cy="{ly - 4}" r="4" fill="{INK}"/>')
     out.append(f'<text x="{left + 140}" y="{ly}" font-size="10.5" fill="{MUTED}">first alert from the monitor, days after the incident started</text>')
     out.append("</svg>")
-    (IMG / "detection.svg").write_text("\n".join(out), encoding="utf-8")
+    (IMG / "detection.svg").write_text("\n".join(out), encoding="utf-8", newline="\n")
 
 
 def early_warning(con):
@@ -102,7 +102,7 @@ def early_warning(con):
     out.append(f'<rect x="{left + 250}" y="{ly - 9}" width="12" height="9" fill="{OCHRE}"/>')
     out.append(f'<text x="{left + 268}" y="{ly}" font-size="10.5" fill="{MUTED}">rules-based health score (At Risk band)</text>')
     out.append("</svg>")
-    (IMG / "early-warning.svg").write_text("\n".join(out), encoding="utf-8")
+    (IMG / "early-warning.svg").write_text("\n".join(out), encoding="utf-8", newline="\n")
 
 
 def main():

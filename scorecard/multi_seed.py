@@ -54,7 +54,7 @@ def main():
     header = "| " + " | ".join(df.columns) + " |\n|" + "---|" * len(df.columns) + "\n"
     body = "".join("| " + " | ".join(str(v) for v in r) + " |\n" for r in df.itertuples(index=False))
     out.write_text(f"# Out-of-sample seeds ({args.label})\n\nDays = days from incident start to first matching alert.\n\n"
-                   + header + body, encoding="utf-8")
+                   + header + body, encoding="utf-8", newline="\n")
     print(f"\nwrote {out}")
 
 
