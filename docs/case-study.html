@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SaaS Revenue Leak: case study</title>
+<style>
+  :root {
+    --paper: #fbfaf7; --rail: #f2efe7; --rule: #e3ded2;
+    --text: #1d2330; --muted: #5b6170;
+    --ink: #2f55b0; --ochre: #c27a1a; --teal: #1f8f7a; --rust: #c0533a;
+    --serif: Georgia, "Times New Roman", serif;
+    --sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+    --mono: "Cascadia Mono", Consolas, monospace;
+  }
+  @page { size: A4; margin: 16mm 15mm 16mm 15mm; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; background: var(--paper); color: var(--text); font: 10.5pt/1.55 var(--sans); }
+  main { max-width: 820px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1, h2, h3 { font-family: var(--serif); font-weight: 400; color: var(--text); margin: 0; }
+  h1 { font-size: 30pt; line-height: 1.1; letter-spacing: -0.01em; }
+  h2 { font-size: 18pt; margin: 40px 0 10px; padding-top: 14px; border-top: 1px solid var(--rule); }
+  h3 { font-size: 13pt; margin: 22px 0 6px; }
+  p { margin: 0 0 10px; }
+  .lede { font: 13pt/1.5 var(--serif); color: var(--muted); margin: 10px 0 12px; max-width: 640px; }
+  .byline { font-size: 9pt; color: var(--muted); letter-spacing: 0.02em; }
+  .muted { color: var(--muted); }
+  .eyebrow { font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink); margin-bottom: 8px; }
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin: 26px 0 6px; }
+  .tile { border-left: 2px solid var(--rule); padding: 2px 14px; }
+  .tile b { display: block; font: 22pt/1.1 var(--serif); font-weight: 400; }
+  .tile span { font-size: 9pt; color: var(--muted); }
+  figure { margin: 16px 0 18px; break-inside: avoid; }
+  figure img { width: 100%; display: block; border: 1px solid var(--rule); }
+  figure img.bare { border: 0; }
+  figcaption { font-size: 8.8pt; color: var(--muted); margin-top: 6px; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 16px; font-size: 9.5pt; break-inside: avoid; }
+  th { text-align: left; font-weight: 600; color: var(--muted); font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--text); padding: 6px 8px 5px 0; }
+  td { border-bottom: 1px solid var(--rule); padding: 6px 8px 6px 0; vertical-align: top; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.date { white-space: nowrap; }
+  code { font: 9pt var(--mono); background: var(--rail); padding: 1px 4px; }
+  ul { margin: 0 0 10px; padding-left: 18px; } li { margin: 3px 0; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .callout { background: var(--rail); border-left: 3px solid var(--ink); padding: 12px 16px; margin: 14px 0; break-inside: avoid; }
+  .callout p:last-child { margin: 0; }
+  .finding { display: grid; grid-template-columns: 160px 1fr; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--rule); break-inside: avoid; }
+  .finding b { font: 20pt/1.1 var(--serif); font-weight: 400; color: var(--ink); }
+  .page-break { break-before: page; }
+  h2, h3 { break-after: avoid; }
+  .keep { break-inside: avoid; }
+  table.split { break-inside: auto; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .pair figure { margin: 8px 0; }
+  .pair table { font-size: 8.8pt; }
+  footer { margin-top: 40px; padding-top: 12px; border-top: 1px solid var(--rule); font-size: 8.5pt; color: var(--muted); }
+  @media (max-width: 640px) {
+    h1 { font-size: 24pt; } .tiles { grid-template-columns: 1fr 1fr; row-gap: 14px; }
+    .two, .pair { grid-template-columns: 1fr; } .finding { grid-template-columns: 1fr; gap: 4px; }
+  }
+  @media print { main { padding: 0; max-width: none; } h2 { margin-top: 28px; } }
+</style>
+</head>
+<body>
+<main>
+<div class="eyebrow">Analytics engineering case study</div>
+<h1>Where the revenue leaks, and how early you can see it</h1>
+<p class="lede">A B2B SaaS revenue engine built so it can be graded: five revenue leaks were planted in a simulated business and sealed away, and the warehouse, the monitor and the churn model had to find them blind.</p>
+<p class="byline">Python, DuckDB, dbt, scikit-learn, XGBoost, Power BI · 1,107 accounts, Oct 2024 to Sep 2026 · reviewer's guide: <a href="https://github.com/damanjz/saas-revenue-leak-bi/blob/main/docs/how-it-works.html">How it works</a></p>
+
+<div class="tiles">
+  <div class="tile"><b>5 of 5</b><span>planted leaks found by the monitor, blind</span></div>
+  <div class="tile"><b>44%</b><span>of churns flagged by the model in the 60 days before</span></div>
+  <div class="tile"><b>2.9x</b><span>churn rate in the riskiest 10% of accounts, out of time</span></div>
+  <div class="tile"><b>13 of 13</b><span>injected data-problem types caught by tests</span></div>
+</div>
+
+<figure>
+  <img src="img/01-revenue.png" alt="Revenue page of the Power BI report: MRR, ARR, MRR growth, NRR, GRR and logo churn, MRR at month end, monthly movements, retention lines and lost MRR by segment">
+  <figcaption>The Revenue page: $1.72M MRR at Sep 2026 ($20.62M ARR), 108% up on a year earlier, trailing-12-month NRR 85.1%.</figcaption>
+</figure>
+
+<h2>The problem</h2>
+<p>Revenue in a subscription business rarely falls off a cliff; it leaks. A price change nudges small customers out at renewal. A broken release sends tickets up and usage down, and the cancellations arrive a month or two later. An account manager stops calling a book. A billing integration double-counts upgrades. A sales channel brings in customers who were never going to stay. Each one is visible in the data long before it is visible in the board deck, if the analytics are built to see it.</p>
+<p>Most BI portfolio projects stop at showing MRR. The harder question is whether the analytics would actually <em>catch</em> a leak, and how fast. On real data that cannot be proved, because nobody knows what the true causes were. So this project starts from the other end: simulate a business with known leaks, seal the answer key, build the whole analytics stack without looking at it, then grade the result.</p>
+
+<h2>The business and the data</h2>
+<p>A day-by-day simulation of a B2B SaaS company over 24 months: 1,107 accounts across SMB, Mid-Market and Enterprise, three plans priced per seat, monthly and annual billing, eight account managers. Each account carries a hidden health value that drives its product use, support load, CSAT, expansion, downgrades and churn. The simulation writes the same exports a real company would have:</p>
+<table>
+  <tr><th>Source</th><th>What it holds</th><th class="num">Size</th></tr>
+  <tr><td>Stripe webhooks and customers</td><td>subscription created, updated, deleted; invoices paid; MRR in cents</td><td class="num">287 churns</td></tr>
+  <tr><td>Zendesk tickets</td><td>priority, category, first response, resolution, CSAT</td><td class="num">17,176</td></tr>
+  <tr><td>Product telemetry</td><td>one row per user session with feature counts</td><td class="num">1.9 million</td></tr>
+  <tr><td>CRM change log</td><td>account manager, CS tier and company-size changes with effective and recorded dates</td><td class="num">SCD2 source</td></tr>
+</table>
+<p>Five leaks were planted, each with a date, a scope and the signal it should leave. When an account churns, the simulation records which leak (if any) caused it. On top, 39,161 rows of real-world mess were injected across 13 kinds: duplicate events under new ids, missing account ids, timestamps in mixed time zones, out-of-range CSAT, tickets solved before they were opened, CRM changes recorded weeks late.</p>
+<table>
+  <tr><th>Planted leak</th><th>From</th><th>What happens</th></tr>
+  <tr><td>INC-01 Starter price rise</td><td>Nov 2025</td><td>Starter goes from $29 to $39 per seat at each account's next renewal; some small customers leave</td></tr>
+  <tr><td>INC-02 Release 5.2</td><td>Mar 2026</td><td>Reports breaks for three weeks for accounts that rely on it: bug tickets, usage collapse, churn later</td></tr>
+  <tr><td>INC-03 Neglected book</td><td>Jun 2025</td><td>One Mid-Market account manager stops working their accounts; health erodes over months</td></tr>
+  <tr><td>INC-04 Duplicate webhooks</td><td>Jan 2026</td><td>A Stripe retry bug re-sends subscription changes under new event ids</td></tr>
+  <tr><td>INC-05 Weak partner cohort</td><td>Apr-Jun 2025</td><td>A partner launch brings in poorly qualified accounts whose use decays after onboarding</td></tr>
+</table>
+
+<h2>The pipeline</h2>
+<p>Raw files land as text in DuckDB. dbt types and cleans them in staging (flagging known mess with warn-level tests rather than hiding it), removes webhook duplicates and builds daily MRR state in an intermediate layer, then publishes a Kimball star schema: a daily MRR movement ledger, daily and weekly usage, support tickets with SLAs, an SCD Type 2 customer dimension and a fiscal calendar. Every core model has an enforced contract. A metrics layer adds the MRR waterfall, NRR and GRR, cohort retention, a weekly health score and the revenue leak monitor. A churn model reads the marts and writes its scores back; the Power BI project is generated from code and reads the same tables.</p>
+<div class="callout"><p>Only one script, <code>scorecard/score.py</code>, ever opens the answer key. Everything it grades ran without it.</p></div>
+
+<h2>Proving it</h2>
+<ul>
+  <li><b>105 dbt nodes</b> pass on every build: models, unique and not-null keys, referential integrity to the dimensions, accepted values and ranges, SCD2 checks (no overlaps or gaps, exactly one current row), a ledger that must reconcile to subscription state, and a waterfall that must balance every month. 8 warn-level tests fire, one for each class of injected mess.</li>
+  <li><b>Mutation test, 14 of 14 caught.</b> The built warehouse is broken 14 different ways (a duplicate ledger row, overlapping SCD2 versions, a waterfall that no longer balances, a ticket pointing at a customer that does not exist...). Each break must fail a test, or the suite is not proving anything.</li>
+  <li><b>69 of 69 report numbers match.</b> The report is opened in its own Power BI window, every measure is evaluated in Power BI's engine, and its figures are compared with independent SQL, including the top-8 call list and the per-account tables.</li>
+  <li><b>Nothing truncated.</b> Every line of text in the report (titles, cards, table cells, slicer values, under every slicer combination) is measured with the real fonts against the space it has; tables must fit without scrollbars.</li>
+  <li><b>Byte-identical reruns.</b> Two complete runs from scratch produce the same 90 output files, raw data to Power BI project.</li>
+</ul>
+
+<h2>The revenue leak monitor</h2>
+<p>Six detectors run as one dbt model. Each tests a metric against its own trailing baseline using only data available at the time, and every alert carries the first date it could actually have fired (a monthly alert only once the month has closed).</p>
+<figure>
+  <img class="bare" src="img/detection.svg" alt="Timeline of the five planted incidents with the first alert for each">
+  <figcaption>Seed 42, detector v2: the first matching alert for each planted leak, in days after it started.</figcaption>
+</figure>
+<table>
+  <tr><th>Incident</th><th>Leak</th><th>Started</th><th class="num">Days</th><th>Detector</th><th>What the monitor saw</th></tr>
+  <tr><td>INC-01</td><td>Starter price rise</td><td class="date">2025-11-01</td><td class="num">29</td><td>churn_spike</td><td>24 of 212 starter customers churned vs 4.4 expected</td></tr>
+<tr><td>INC-02</td><td>Release 5.2 breaks Reports</td><td class="date">2026-03-10</td><td class="num">5</td><td>feature_usage_drop</td><td>reports_run per active account fell to 42.0% of baseline</td></tr>
+<tr><td>INC-03</td><td>Neglected account-manager book</td><td class="date">2025-06-01</td><td class="num">394</td><td>am_book_retention</td><td>Connie Lawrence (Mid-Market): 12.4% of book lost in 6 months vs 5.5% for peers</td></tr>
+<tr><td>INC-04</td><td>Stripe re-sends webhooks</td><td class="date">2026-01-15</td><td class="num">3</td><td>duplicate_billing</td><td>3 duplicate subscription events removed</td></tr>
+<tr><td>INC-05</td><td>Weak partner cohort</td><td class="date">2025-04-01</td><td class="num">306</td><td>weak_cohort</td><td>2025-04 cohort month-9 retention 63.0% vs 84.0% for earlier cohorts</td></tr>
+</table>
+<p>3 alerts matched no planted leak (false alarms). 1 more matched none of the matching rules but, looking up the true causes behind them, were mostly incident-driven churn: real downstream signals, counted separately rather than as wins.</p>
+
+<h3>One revision, checked on unseen worlds</h3>
+<p>The first, blind version of the monitor used ad-hoc thresholds ("twice the average", "mean plus three standard deviations of eight weeks"). On seed 42 it found 4 of 5 leaks with 10 false alarms. Reading the false alarms showed the thresholds firing on small counts, and the cohort detector checking too few milestones to see the weak cohort. Version 2 replaced the thresholds with Poisson, binomial and two-proportion tests and checked cohorts at months 3, 6, 9 and 12. Because v2 was written after seeing seed 42, both versions were rerun on three simulated worlds nobody had looked at (<a href="https://github.com/damanjz/saas-revenue-leak-bi/blob/main/docs/detector_revisions.md">full notes</a>):</p>
+<div class="pair">
+  <div><h3>v1, ad-hoc thresholds</h3><table>
+<tr><th>Seed</th><th>INC-01</th><th>INC-02</th><th>INC-03</th><th>INC-04</th><th>INC-05</th><th>False alarms</th></tr>
+<tr><td>42</td><td class="num">29d</td><td class="num">5d</td><td class="num">394d</td><td class="num">3d</td><td class="num">missed</td><td class="num">10</td></tr>
+<tr><td>7</td><td class="num">29d</td><td class="num">5d</td><td class="num">missed</td><td class="num">3d</td><td class="num">244d</td><td class="num">10</td></tr>
+<tr><td>2024</td><td class="num">29d</td><td class="num">5d</td><td class="num">303d</td><td class="num">3d</td><td class="num">214d</td><td class="num">14</td></tr>
+<tr><td>31337</td><td class="num">29d</td><td class="num">5d</td><td class="num">missed</td><td class="num">3d</td><td class="num">244d</td><td class="num">13</td></tr>
+</table></div>
+  <div><h3>v2, statistical tests</h3><table>
+<tr><th>Seed</th><th>INC-01</th><th>INC-02</th><th>INC-03</th><th>INC-04</th><th>INC-05</th><th>False alarms</th></tr>
+<tr><td>42</td><td class="num">29d</td><td class="num">5d</td><td class="num">394d</td><td class="num">3d</td><td class="num">306d</td><td class="num">3</td></tr>
+<tr><td>7</td><td class="num">29d</td><td class="num">5d</td><td class="num">missed</td><td class="num">3d</td><td class="num">365d</td><td class="num">1</td></tr>
+<tr><td>2024</td><td class="num">29d</td><td class="num">5d</td><td class="num">244d</td><td class="num">3d</td><td class="num">214d</td><td class="num">6</td></tr>
+<tr><td>31337</td><td class="num">29d</td><td class="num">5d</td><td class="num">152d</td><td class="num">3d</td><td class="num">306d</td><td class="num">8</td></tr>
+</table></div>
+</div>
+<p class="muted">Days from the start of each incident to its first matching alert. The price rise, the broken release and the duplicate webhooks are caught within a month in every world. The neglected book is the hardest: the account-manager test needs months of book history before it has the power to fire.</p>
+
+<h2>Data quality: what the tests caught</h2>
+<table class="split">
+  <tr><th>Injected problem</th><th class="num">Injected</th><th class="num">Flagged</th><th>Handled by</th></tr>
+  <tr><td>Stripe webhooks re-sent under new ids (INC-04)</td><td class="num">15</td><td class="num">15</td><td>removed in int_subscription_events</td></tr>
+<tr><td>Stripe events delivered twice, same id</td><td class="num">51</td><td class="num">51</td><td>deduplicated in staging</td></tr>
+<tr><td>Plan ids with stray casing or spaces</td><td class="num">288</td><td class="num">288</td><td>lower/trim in staging</td></tr>
+<tr><td>Stripe customers without an account id</td><td class="num">20</td><td class="num">20</td><td>matched on email domain</td></tr>
+<tr><td>Tickets without an account</td><td class="num">99</td><td class="num">99</td><td>kept, mapped to unknown member -1</td></tr>
+<tr><td>Ticket times in IST instead of UTC</td><td class="num">380</td><td class="num">380</td><td>converted to UTC</td></tr>
+<tr><td>Tickets solved before they were opened</td><td class="num">34</td><td class="num">34</td><td>resolution nulled and flagged</td></tr>
+<tr><td>CSAT scores outside 1-5</td><td class="num">33</td><td class="num">33</td><td>CSAT nulled and flagged</td></tr>
+<tr><td>Ticket priorities with stray casing</td><td class="num">846</td><td class="num">846</td><td>lower/trim in staging</td></tr>
+<tr><td>Sessions with no end time</td><td class="num">18,806</td><td class="num">18,774</td><td>duration nulled</td></tr>
+<tr><td>Sessions ending before they start</td><td class="num">3,703</td><td class="num">3,703</td><td>duration nulled</td></tr>
+<tr><td>Sessions logged twice</td><td class="num">14,839</td><td class="num">14,839</td><td>deduplicated in staging</td></tr>
+<tr><td>CRM changes recorded 30+ days late</td><td class="num">47</td><td class="num">47</td><td>SCD2 uses effective date</td></tr>
+</table>
+<p class="muted">Flagged can sit just below injected where two problems land on the same row (a session duplicated and also missing its end time is counted once).</p>
+
+<h2>The churn model</h2>
+<p>One row per paying account per week, built only from what was known that week: 30-day usage velocity, seat adoption, days since last session, tickets against the account's own baseline, high-priority and bug tickets, SLA breaches, CSAT level and trend, seat changes, a recent price rise, downgrades, days to renewal, and the account's segment, plan, channel and manager. The label: does the account cancel in the next 60 days. The model trains on weeks up to December 2025 and is tested on March to August 2026, out of time and straight through a broken release it never saw.</p>
+<table>
+  <tr><th>Out-of-time test, Mar-Aug 2026</th><th class="num">logistic regression (chosen)</th><th class="num">XGBoost</th></tr>
+  <tr><td>ROC AUC</td><td class="num">0.73</td><td class="num">0.71</td></tr>
+  <tr><td>Precision-recall AUC (base rate 6.6%)</td><td class="num">0.19</td><td class="num">0.14</td></tr>
+  <tr><td>Churn rate in the riskiest 10%</td><td class="num">19.4% (2.9x)</td><td class="num"></td></tr>
+  <tr><td>Share of all churners inside that 10%</td><td class="num">29%</td><td class="num"></td></tr>
+</table>
+<figure>
+  <img class="bare" src="img/early-warning.svg" alt="Share of churns flagged in the 60 days before, by true cause, for the model and the health score">
+  <figcaption>Of 140 churns in the test period, the model had the account in its top 10% within the 60 days before for 44% of them (median warning 41 days); the rules-based health score flagged 11%.</figcaption>
+</figure>
+<p>The split by true cause is the useful part. Churn caused by a leak leaves a trail (falling usage, ticket spikes, a recent price rise) and the model picks most of it up. Organic churn, where a healthy-looking account simply leaves at renewal, is caught far less often (22%): there is little to see. The rules-based health score, with weights fixed by hand, catches much less than the model; it stays in the report because a CS team can read it, and the gap is shown rather than hidden. The strongest features are days to renewal, seat count, seat adoption, annual billing, monthly billing.</p>
+
+<h2>The report</h2>
+<p>Four pages, generated as a Power BI project (TMDL model, PBIR report) from <code>powerbi/build_pbip.py</code>: Revenue for the board view, Cohorts for retention and adoption, Accounts for the customer-success team, and Account to look at one customer in depth.</p>
+<figure>
+  <img src="img/02-cohorts.png" alt="Cohorts page: retention heatmap by signup cohort, feature use per account, health bands">
+  <figcaption>Cohorts: the Apr-May 2025 partner cohorts go dark from month 6; the dip in Reports use in March 2026 is the broken release.</figcaption>
+</figure>
+
+<h3>What the data says</h3>
+<div class="finding"><b>8.9%</b><div>Monthly churn on the Starter plan in the three months after the price rise, against 2.3% in the six months before. The extra revenue per seat was real, but so was the cost in logos.</div></div>
+<div class="finding"><b>162</b><div>Bug tickets in the worst week of the Release 5.2 failure, against about 36 in a normal week; Reports use per active account fell 72%. The cancellations followed one to three months later.</div></div>
+<div class="finding"><b>65%</b><div>Of the Apr-May 2025 signups still paying nine months in, against 82% for every other cohort. The partner channel bought growth that did not stay.</div></div>
+<div class="finding"><b>15</b><div>Duplicate Stripe events in two weeks of January 2026. Counted naively, they would have added $1,958 of expansion MRR that never existed.</div></div>
+<div class="finding"><b>Connie Lawrence</b><div>The neglected book, as the monitor last described it: Connie Lawrence (Mid-Market): 14.3% of book lost in 6 months vs 5.5% for peers.</div></div>
+<p>Over the 24 months, churn and downgrades took $441K of MRR while expansion added $276K; gross revenue retention averaged 97.4% a month in the last year and logo churn 3.5%.</p>
+
+<figure>
+  <img src="img/03-accounts.png" alt="Accounts page: action matrix of model risk against health score, call list of the top 8 accounts by expected loss, and the latest leak alerts">
+  <figcaption>Accounts: 86 high-risk accounts hold $192K of MRR, with $151K expected to churn in 60 days. The call list ranks them by expected loss with the reason in plain words.</figcaption>
+</figure>
+<figure>
+  <img src="img/04-account.png" alt="Account page for one customer: MRR history, weekly usage, health trend, billing ledger and support tickets">
+  <figcaption>Account: one customer's MRR history, usage, health trend, billing ledger and tickets, with the model's reasons.</figcaption>
+</figure>
+
+<h2>Built as code</h2>
+<ul>
+  <li>One command, <code>python pipeline.py</code>, runs everything: simulation, dbt build and tests, model, exports, Power BI project, scorecard. CI runs it on every push, plus the mutation test.</li>
+  <li>The Power BI report is generated: every page, visual and measure. Column types come from the same queries that write its data.</li>
+  <li>This case study is rendered from the warehouse by <code>docs/render_docs.py</code>; it fails if any figure is missing.</li>
+</ul>
+
+<h2>Limits and next steps</h2>
+<ul>
+  <li>The data is simulated. The scores measure how well the analytics find what was planted, not how a real business behaves. The answer key is only possible because of that.</li>
+  <li>Incident dates are fixed across seeds; a stronger test would also randomise when and where the leaks happen.</li>
+  <li>The account-manager detector finds a neglected book months late; a test that pools evidence over time (CUSUM) would likely find it sooner.</li>
+  <li>The health score's weights are hand-set and weak. Calibrating it against the model's drivers, while keeping it readable, is the obvious next step.</li>
+</ul>
+<footer>Every figure here was computed from the warehouse by docs/render_docs.py. Code, data generator and report: see the repository README.</footer>
+</main>
+</body>
+</html>

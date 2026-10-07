@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 296" font-family="Segoe UI, system-ui, sans-serif">
+<rect width="820" height="296" fill="#fbfaf7"/>
+<line x1="170.0" y1="22" x2="170.0" y2="272" stroke="#e3ded2"/>
+<text x="170.0" y="14" font-size="10.5" fill="#5b6170" text-anchor="middle">0%</text>
+<line x1="315.0" y1="22" x2="315.0" y2="272" stroke="#e3ded2"/>
+<text x="315.0" y="14" font-size="10.5" fill="#5b6170" text-anchor="middle">25%</text>
+<line x1="460.0" y1="22" x2="460.0" y2="272" stroke="#e3ded2"/>
+<text x="460.0" y="14" font-size="10.5" fill="#5b6170" text-anchor="middle">50%</text>
+<line x1="605.0" y1="22" x2="605.0" y2="272" stroke="#e3ded2"/>
+<text x="605.0" y="14" font-size="10.5" fill="#5b6170" text-anchor="middle">75%</text>
+<line x1="750.0" y1="22" x2="750.0" y2="272" stroke="#e3ded2"/>
+<text x="750.0" y="14" font-size="10.5" fill="#5b6170" text-anchor="middle">100%</text>
+<text x="0" y="44" font-size="12" font-weight="600" fill="#1d2330">All churns</text>
+<text x="0" y="58" font-size="10" fill="#5b6170">140 churns</text>
+<rect x="170" y="34" width="256.9" height="12" fill="#2f55b0"/>
+<text x="432.9" y="44" font-size="10.5" fill="#2f55b0">44%</text>
+<rect x="170" y="49" width="66.3" height="12" fill="#c27a1a"/>
+<text x="242.3" y="59" font-size="10.5" fill="#c27a1a">11%</text>
+<text x="0" y="84" font-size="12" font-weight="400" fill="#1d2330">Price rise</text>
+<text x="0" y="98" font-size="10" fill="#5b6170">11 churns</text>
+<rect x="170" y="74" width="474.5" height="12" fill="#2f55b0"/>
+<text x="650.5" y="84" font-size="10.5" fill="#2f55b0">82%</text>
+<rect x="170" y="89" width="105.5" height="12" fill="#c27a1a"/>
+<text x="281.5" y="99" font-size="10.5" fill="#c27a1a">18%</text>
+<text x="0" y="124" font-size="12" font-weight="400" fill="#1d2330">Bad release</text>
+<text x="0" y="138" font-size="10" fill="#5b6170">27 churns</text>
+<rect x="170" y="114" width="343.7" height="12" fill="#2f55b0"/>
+<text x="519.7" y="124" font-size="10.5" fill="#2f55b0">59%</text>
+<rect x="170" y="129" width="85.9" height="12" fill="#c27a1a"/>
+<text x="261.9" y="139" font-size="10.5" fill="#c27a1a">15%</text>
+<text x="0" y="164" font-size="12" font-weight="400" fill="#1d2330">Neglected book</text>
+<text x="0" y="178" font-size="10" fill="#5b6170">22 churns</text>
+<rect x="170" y="154" width="290.0" height="12" fill="#2f55b0"/>
+<text x="466.0" y="164" font-size="10.5" fill="#2f55b0">50%</text>
+<rect x="170" y="169" width="79.1" height="12" fill="#c27a1a"/>
+<text x="255.1" y="179" font-size="10.5" fill="#c27a1a">14%</text>
+<text x="0" y="204" font-size="12" font-weight="400" fill="#1d2330">Weak partner cohort</text>
+<text x="0" y="218" font-size="10" fill="#5b6170">16 churns</text>
+<rect x="170" y="194" width="435.0" height="12" fill="#2f55b0"/>
+<text x="611.0" y="204" font-size="10.5" fill="#2f55b0">75%</text>
+<rect x="170" y="209" width="253.8" height="12" fill="#c27a1a"/>
+<text x="429.8" y="219" font-size="10.5" fill="#c27a1a">44%</text>
+<text x="0" y="244" font-size="12" font-weight="400" fill="#1d2330">Organic (no incident)</text>
+<text x="0" y="258" font-size="10" fill="#5b6170">64 churns</text>
+<rect x="170" y="234" width="126.9" height="12" fill="#2f55b0"/>
+<text x="302.9" y="244" font-size="10.5" fill="#2f55b0">22%</text>
+<rect x="170" y="249" width="0.0" height="12" fill="#c27a1a"/>
+<text x="176.0" y="259" font-size="10.5" fill="#c27a1a">0%</text>
+<rect x="170" y="279" width="12" height="9" fill="#2f55b0"/>
+<text x="188" y="288" font-size="10.5" fill="#5b6170">churn model (top 10% risk that week)</text>
+<rect x="420" y="279" width="12" height="9" fill="#c27a1a"/>
+<text x="438" y="288" font-size="10.5" fill="#5b6170">rules-based health score (At Risk band)</text>
+</svg>
