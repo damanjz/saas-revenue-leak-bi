@@ -1,0 +1,58 @@
+version: 2
+
+models:
+  - name: mrr_waterfall_monthly
+    description: Per-account monthly MRR movement classified as New, Expansion, Contraction, Churn, Reactivation or Retained.
+    columns:
+      - {name: waterfall_id, data_tests: [unique, not_null]}
+      - name: movement_category
+        data_tests:
+          - accepted_values:
+              arguments: {values: [New, Expansion, Contraction, Churn, Reactivation, Retained]}
+      - name: customer_sk
+        data_tests:
+          - relationships:
+              arguments: {to: ref('dim_customers'), field: customer_sk}
+
+  - name: revenue_retention_monthly
+    description: Company MRR bridge with NRR and GRR, month over month and trailing 12 months.
+    columns:
+      - {name: month_start, data_tests: [unique, not_null]}
+      - name: grr_mom
+        data_tests:
+          - accepted_range: {arguments: {min_value: 0, max_value: 1}}
+      - name: nrr_mom
+        data_tests:
+          - accepted_range: {arguments: {min_value: 0, max_value: 2}}
+
+  - name: cohort_retention
+    description: Signup cohort x months since first payment, logo and revenue retention.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments: {combination_of_columns: [cohort_month, months_since_signup]}
+    columns:
+      - name: logo_retention
+        data_tests:
+          - accepted_range: {arguments: {min_value: 0, max_value: 1}}
+
+  - name: customer_health_weekly
+    description: Weekly composite health score per paying account (usage trend, adoption, support load, CSAT).
+    columns:
+      - {name: health_id, data_tests: [unique, not_null]}
+      - name: health_score
+        data_tests:
+          - not_null
+          - accepted_range: {arguments: {min_value: 0, max_value: 100}}
+      - name: health_band
+        data_tests:
+          - accepted_values:
+              arguments: {values: [Healthy, Watch, At Risk]}
+
+  - name: anomaly_alerts
+    description: Output of the six revenue-leak detectors. detected_at is the first day each alert could have fired.
+    columns:
+      - {name: alert_id, data_tests: [unique, not_null]}
+      - name: detector
+        data_tests:
+          - accepted_values:
+              arguments: {values: [churn_spike, ticket_spike, feature_usage_drop, am_book_retention, weak_cohort, duplicate_billing]}

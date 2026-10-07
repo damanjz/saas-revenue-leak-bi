@@ -1,0 +1,27 @@
+-- Calendar dimension, 2024-2027. Fiscal year starts 1 February (FY2026 = Feb 2025 - Jan 2026).
+select
+    {{ date_key('date_day') }}                                      as date_key,
+    date_day                                                        as date,
+    cast(year(date_day) as integer)                                 as year,
+    cast(quarter(date_day) as integer)                              as quarter,
+    'Q' || quarter(date_day)                                        as quarter_label,
+    year(date_day) || '-Q' || quarter(date_day)                     as year_quarter,
+    cast(month(date_day) as integer)                                as month,
+    monthname(date_day)                                             as month_name,
+    strftime(date_day, '%b')                                        as month_short,
+    strftime(date_day, '%Y-%m')                                     as year_month,
+    cast(date_trunc('month', date_day) as date)                     as month_start,
+    cast(last_day(date_day) as date)                                as month_end,
+    cast(date_trunc('week', date_day) as date)                      as week_start,
+    cast(weekofyear(date_day) as integer)                           as iso_week,
+    cast(day(date_day) as integer)                                  as day_of_month,
+    cast(isodow(date_day) as integer)                               as day_of_week,
+    dayname(date_day)                                               as day_name,
+    isodow(date_day) >= 6                                           as is_weekend,
+    date_day = last_day(date_day)                                   as is_month_end,
+    cast(day(last_day(date_day)) as integer)                        as days_in_month,
+    cast(year(date_day) + case when month(date_day) >= 2 then 1 else 0 end as integer) as fiscal_year,
+    cast(((month(date_day) + 10) % 12) // 3 + 1 as integer)         as fiscal_quarter,
+    date_day between date '{{ var("analysis_start_date") }}' and date '{{ var("analysis_end_date") }}' as is_in_analysis_period,
+    cast(date_diff('month', date_trunc('month', date_day), date_trunc('month', date '{{ var("analysis_end_date") }}')) as integer) as months_before_analysis_end
+from {{ ref('util_date_spine') }}

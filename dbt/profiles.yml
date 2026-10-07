@@ -1,0 +1,7 @@
+revenue_leak:
+  target: local
+  outputs:
+    local:
+      type: duckdb
+      path: "{{ env_var('DUCKDB_PATH', '../warehouse/revenue.duckdb') }}"
+      threads: 4

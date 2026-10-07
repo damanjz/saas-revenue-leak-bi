@@ -53,6 +53,7 @@ class Simulation:
         self._event_seq = 0
         self._ticket_seq = 100000
         self._sub_seq = 0
+        self._clock: dict[tuple[int, date], int] = {}
 
         self._build_ams()
         self._build_accounts()
@@ -163,7 +164,10 @@ class Simulation:
 
     def _emit(self, i: int, day: date, etype: str, reason: str, prev: dict | None = None):
         self._event_seq += 1
-        sec = self.rng.integers(6 * 3600, 22 * 3600)
+        # events for the same account on the same day keep their causal order
+        last = self._clock.get((i, day), 0)
+        sec = max(int(self.rng.integers(6 * 3600, 20 * 3600)), last + 60)
+        self._clock[(i, day)] = sec
         unit = self.unit_price[i] * (12 * (1 - C.ANNUAL_DISCOUNT) if self.annual[i] else 1)
         self.stripe_events.append({
             "event_id": f"evt_{self._event_seq:08d}{self.rng.integers(0, 16**6):06x}",
@@ -180,6 +184,7 @@ class Simulation:
             "previous_quantity": prev.get("quantity") if prev else None,
             "previous_mrr_cents": prev.get("mrr") if prev else None,
             "change_reason": reason,
+            "amount_paid_cents": None,
         })
 
     def _invoice(self, i: int, day: date):
@@ -197,7 +202,8 @@ class Simulation:
             "unit_amount_cents": None,
             "mrr_cents": None,
             "previous_plan_id": None, "previous_quantity": None, "previous_mrr_cents": None,
-            "change_reason": f"amount_paid_cents={amount}",
+            "change_reason": None,
+            "amount_paid_cents": amount,
         })
 
     def _crm(self, i: int, day: date, **changes):

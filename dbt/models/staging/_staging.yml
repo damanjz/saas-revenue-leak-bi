@@ -1,0 +1,120 @@
+version: 2
+
+# Staging tests watch the incoming sources. Severity "warn" marks known
+# real-world mess: the build continues, the warning is the alert, and the
+# downstream models handle the problem. Anything that would corrupt a metric
+# is an error.
+
+models:
+  - name: stg_stripe__events
+    description: Stripe webhook events, typed. Exact re-deliveries removed; re-deliveries under a new event_id kept for detection.
+    data_tests:
+      - unique_combination_of_columns:
+          name: warn_stripe_duplicate_subscription_changes
+          arguments:
+            combination_of_columns: [subscription_id, event_type, occurred_at, quantity, mrr_cents, previous_mrr_cents]
+          config:
+            severity: warn
+    columns:
+      - name: event_id
+        data_tests: [unique, not_null]
+      - name: event_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [customer.subscription.created, customer.subscription.updated, customer.subscription.deleted, invoice.paid]
+      - name: plan_id
+        description: Lower-cased and trimmed; the source has mixed casing and stray whitespace.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [starter, growth, enterprise]
+      - name: stripe_customer_id
+        data_tests: [not_null]
+      - name: mrr_cents
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 0
+
+  - name: stg_stripe__customers
+    columns:
+      - name: stripe_customer_id
+        data_tests: [unique, not_null]
+      - name: metadata_account_id
+        description: About 1% are blank in the source; int_stripe_customer_accounts falls back to the email domain.
+        data_tests:
+          - not_null:
+              config:
+                severity: warn
+
+  - name: stg_zendesk__tickets
+    columns:
+      - name: ticket_id
+        data_tests: [unique, not_null]
+      - name: account_id
+        data_tests:
+          - not_null:
+              config:
+                severity: warn
+      - name: priority
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [low, normal, high, urgent]
+      - name: csat_score_raw
+        data_tests:
+          - accepted_range:
+              name: warn_ticket_csat_out_of_range
+              arguments:
+                min_value: 1
+                max_value: 5
+              config:
+                severity: warn
+      - name: created_at
+        data_tests: [not_null]
+    data_tests:
+      - expression_is_true:
+          name: warn_ticket_solved_before_created
+          arguments:
+            expression: "solved_at is null or solved_at >= created_at"
+          config:
+            severity: warn
+
+  - name: stg_telemetry__sessions
+    columns:
+      - name: session_id
+        data_tests: [unique, not_null]
+      - name: account_id
+        data_tests: [not_null]
+      - name: is_missing_end
+        data_tests:
+          - accepted_values:
+              name: warn_session_missing_end
+              arguments:
+                values: [false]
+              config:
+                severity: warn
+      - name: is_negative_duration
+        data_tests:
+          - accepted_values:
+              name: warn_session_end_before_start
+              arguments:
+                values: [false]
+              config:
+                severity: warn
+
+  - name: stg_crm__account_changes
+    columns:
+      - name: account_id
+        data_tests: [not_null]
+      - name: recording_lag_days
+        description: Days between a change happening and it reaching the CRM. Late changes are handled by effective-dated SCD2 versions.
+        data_tests:
+          - accepted_range:
+              name: warn_crm_change_recorded_30_days_late
+              arguments:
+                min_value: 0
+                max_value: 29
+              config:
+                severity: warn

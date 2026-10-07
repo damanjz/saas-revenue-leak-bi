@@ -1,0 +1,32 @@
+version: 2
+
+# Raw landing files are read straight from CSV as text. Typing and cleaning
+# happens in staging, so nothing upstream is trusted.
+sources:
+  - name: stripe
+    description: Stripe webhook export (subscriptions and invoices) and the customer list.
+    tables:
+      - name: stripe_events
+        meta:
+          external_location: "read_csv('{{ env_var('RAW_DIR', '../data/raw') }}/stripe_events.csv', header = true, all_varchar = true)"
+      - name: stripe_customers
+        meta:
+          external_location: "read_csv('{{ env_var('RAW_DIR', '../data/raw') }}/stripe_customers.csv', header = true, all_varchar = true)"
+  - name: zendesk
+    description: Zendesk ticket export.
+    tables:
+      - name: zendesk_tickets
+        meta:
+          external_location: "read_csv('{{ env_var('RAW_DIR', '../data/raw') }}/zendesk_tickets.csv', header = true, all_varchar = true)"
+  - name: telemetry
+    description: Product analytics session export, one row per user session.
+    tables:
+      - name: telemetry_sessions
+        meta:
+          external_location: "read_csv('{{ env_var('RAW_DIR', '../data/raw') }}/telemetry_sessions.csv.gz', header = true, all_varchar = true)"
+  - name: crm
+    description: CRM account change log. effective_at is when a change happened, recorded_at is when it reached the CRM.
+    tables:
+      - name: crm_account_changes
+        meta:
+          external_location: "read_csv('{{ env_var('RAW_DIR', '../data/raw') }}/crm_account_changes.csv', header = true, all_varchar = true)"

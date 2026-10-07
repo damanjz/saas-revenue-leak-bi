@@ -1,0 +1,235 @@
+version: 2
+
+# The star schema. Contracts are enforced: the build fails if a model's
+# columns or types drift from what is declared here, so Power BI never
+# receives a silently changed shape.
+
+models:
+  - name: dim_date
+    description: Calendar dimension 2024-2027 with fiscal (Feb-start) attributes. Marked as the date table in Power BI.
+    config:
+      contract: {enforced: true}
+    columns:
+      - {name: date_key, data_type: integer, constraints: [{type: not_null}], data_tests: [unique]}
+      - {name: date, data_type: date, data_tests: [unique, not_null]}
+      - {name: year, data_type: integer}
+      - {name: quarter, data_type: integer}
+      - {name: quarter_label, data_type: varchar}
+      - {name: year_quarter, data_type: varchar}
+      - {name: month, data_type: integer}
+      - {name: month_name, data_type: varchar}
+      - {name: month_short, data_type: varchar}
+      - {name: year_month, data_type: varchar}
+      - {name: month_start, data_type: date}
+      - {name: month_end, data_type: date}
+      - {name: week_start, data_type: date}
+      - {name: iso_week, data_type: integer}
+      - {name: day_of_month, data_type: integer}
+      - {name: day_of_week, data_type: integer}
+      - {name: day_name, data_type: varchar}
+      - {name: is_weekend, data_type: boolean}
+      - {name: is_month_end, data_type: boolean}
+      - {name: days_in_month, data_type: integer}
+      - {name: fiscal_year, data_type: integer}
+      - {name: fiscal_quarter, data_type: integer}
+      - {name: is_in_analysis_period, data_type: boolean}
+      - {name: months_before_analysis_end, data_type: integer}
+
+  - name: dim_customers
+    description: >
+      SCD Type 2 customer dimension. New version on any change to account manager,
+      CS tier, company size band or ARR band. Versions are effective-dated, so CRM
+      changes recorded late still land at the right point in history.
+    config:
+      contract: {enforced: true}
+    data_tests:
+      - scd2_valid_ranges:
+          arguments: {key: account_id}
+      - one_current_row:
+          arguments: {key: account_id}
+      - unique_combination_of_columns:
+          arguments: {combination_of_columns: [account_id, valid_from]}
+    columns:
+      - {name: customer_sk, data_type: integer, description: Surrogate key. -1 is the unknown member., constraints: [{type: not_null}], data_tests: [unique]}
+      - {name: account_id, data_type: varchar, description: Natural key from the CRM., data_tests: [not_null]}
+      - {name: valid_from, data_type: date, data_tests: [not_null]}
+      - {name: valid_to, data_type: date, description: 9999-12-31 on the current version., data_tests: [not_null]}
+      - {name: is_current, data_type: boolean}
+      - {name: company_name, data_type: varchar}
+      - {name: domain, data_type: varchar}
+      - {name: industry, data_type: varchar}
+      - {name: region, data_type: varchar}
+      - name: segment
+        data_type: varchar
+        data_tests:
+          - accepted_values:
+              arguments: {values: [SMB, Mid-Market, Enterprise, Unknown]}
+      - {name: employee_count, data_type: integer}
+      - {name: company_size_band, data_type: varchar}
+      - {name: cs_tier, data_type: varchar}
+      - {name: acquisition_channel, data_type: varchar}
+      - {name: account_manager, data_type: varchar, data_tests: [not_null]}
+      - name: arr_band
+        data_type: varchar
+        data_tests:
+          - accepted_values:
+              arguments: {values: [Pre-revenue, Under $10K, $10K-$50K, $50K-$100K, $100K+, Churned, Unknown]}
+      - {name: first_subscription_date, data_type: date}
+      - {name: cohort_month, data_type: date}
+
+  - name: fact_mrr_movements
+    description: Daily MRR ledger. Grain is account x day, one row per day the account's MRR changed. Summing mrr_delta gives MRR at any date.
+    config:
+      contract: {enforced: true}
+    columns:
+      - {name: movement_id, data_type: varchar, constraints: [{type: not_null}], data_tests: [unique]}
+      - name: date_key
+        data_type: integer
+        data_tests:
+          - relationships:
+              arguments: {to: ref('dim_date'), field: date_key}
+      - name: customer_sk
+        data_type: integer
+        data_tests:
+          - relationships:
+              arguments: {to: ref('dim_customers'), field: customer_sk}
+      - {name: account_id, data_type: varchar, data_tests: [not_null]}
+      - {name: movement_date, data_type: date}
+      - name: movement_type
+        data_type: varchar
+        data_tests:
+          - accepted_values:
+              arguments: {values: [New, Expansion, Contraction, Churn, Reactivation]}
+      - {name: change_reason, data_type: varchar}
+      - {name: plan_id, data_type: varchar}
+      - {name: previous_plan_id, data_type: varchar}
+      - {name: seats, data_type: integer}
+      - {name: previous_seats, data_type: integer}
+      - name: mrr_before
+        data_type: decimal(12,2)
+        data_tests:
+          - accepted_range: {arguments: {min_value: 0}}
+      - name: mrr_after
+        data_type: decimal(12,2)
+        data_tests:
+          - accepted_range: {arguments: {min_value: 0}}
+      - name: mrr_delta
+        data_type: decimal(12,2)
+        data_tests:
+          - expression_is_true:
+              arguments: {expression: "mrr_delta <> 0"}
+
+  - name: fact_product_usage
+    description: Daily product usage per account (active days only).
+    config:
+      contract: {enforced: true}
+    columns:
+      - {name: usage_id, data_type: varchar, constraints: [{type: not_null}], data_tests: [unique]}
+      - name: date_key
+        data_type: integer
+        data_tests:
+          - relationships:
+              arguments: {to: ref('dim_date'), field: date_key}
+      - name: customer_sk
+        data_type: integer
+        data_tests:
+          - relationships:
+              arguments: {to: ref('dim_customers'), field: customer_sk}
+      - {name: account_id, data_type: varchar}
+      - {name: usage_date, data_type: date}
+      - name: sessions
+        data_type: integer
+        data_tests:
+          - accepted_range: {arguments: {min_value: 1}}
+      - name: active_users
+        data_type: integer
+        data_tests:
+          - accepted_range: {arguments: {min_value: 1}}
+      - name: session_minutes
+        data_type: double
+        data_tests:
+          - accepted_range: {arguments: {min_value: 0}}
+      - {name: sessions_missing_duration, data_type: integer}
+      - {name: dashboards_viewed, data_type: integer}
+      - {name: reports_run, data_type: integer}
+      - {name: integrations_synced, data_type: integer}
+      - {name: exports, data_type: integer}
+      - {name: api_calls, data_type: integer}
+
+  - name: fact_product_usage_weekly
+    description: Weekly product usage per account. weekly_active_users is distinct users in the week.
+    config:
+      contract: {enforced: true}
+    columns:
+      - {name: usage_week_id, data_type: varchar, constraints: [{type: not_null}], data_tests: [unique]}
+      - name: week_start_date_key
+        data_type: integer
+        data_tests:
+          - relationships:
+              arguments: {to: ref('dim_date'), field: date_key}
+      - name: customer_sk
+        data_type: integer
+        data_tests:
+          - relationships:
+              arguments: {to: ref('dim_customers'), field: customer_sk}
+      - {name: account_id, data_type: varchar}
+      - {name: week_start, data_type: date}
+      - {name: sessions, data_type: integer}
+      - {name: weekly_active_users, data_type: integer}
+      - {name: session_minutes, data_type: double}
+      - {name: dashboards_viewed, data_type: integer}
+      - {name: reports_run, data_type: integer}
+      - {name: integrations_synced, data_type: integer}
+      - {name: exports, data_type: integer}
+      - {name: api_calls, data_type: integer}
+
+  - name: fact_support_tickets
+    description: One row per Zendesk ticket with first-response and resolution SLAs. Invalid source values are nulled and flagged.
+    config:
+      contract: {enforced: true}
+    columns:
+      - {name: ticket_id, data_type: integer, constraints: [{type: not_null}], data_tests: [unique]}
+      - name: created_date_key
+        data_type: integer
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: ref('dim_date'), field: date_key}
+      - name: solved_date_key
+        data_type: integer
+        data_tests:
+          - relationships:
+              arguments: {to: ref('dim_date'), field: date_key}
+      - name: customer_sk
+        data_type: integer
+        data_tests:
+          - relationships:
+              arguments: {to: ref('dim_customers'), field: customer_sk}
+      - {name: account_id, data_type: varchar}
+      - {name: created_at, data_type: timestamp}
+      - {name: solved_at, data_type: timestamp}
+      - {name: status, data_type: varchar}
+      - name: priority
+        data_type: varchar
+        data_tests:
+          - accepted_values:
+              arguments: {values: [low, normal, high, urgent]}
+      - {name: channel, data_type: varchar}
+      - {name: category, data_type: varchar}
+      - {name: tags, data_type: varchar}
+      - {name: is_bug, data_type: boolean}
+      - {name: first_response_minutes, data_type: integer}
+      - name: resolution_hours
+        data_type: double
+        data_tests:
+          - accepted_range: {arguments: {min_value: 0}}
+      - {name: first_response_target_minutes, data_type: integer}
+      - {name: resolution_target_hours, data_type: integer}
+      - {name: first_response_sla_breached, data_type: boolean}
+      - {name: resolution_sla_breached, data_type: boolean}
+      - name: csat_score
+        data_type: integer
+        data_tests:
+          - accepted_range: {arguments: {min_value: 1, max_value: 5}}
+      - {name: is_invalid_csat, data_type: boolean}
+      - {name: is_invalid_resolution, data_type: boolean}
