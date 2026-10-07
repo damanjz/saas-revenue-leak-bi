@@ -57,6 +57,7 @@ public class PbiCap {
   [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
   [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr dc, uint flags);
   [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int cmd);
+  [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint msg, IntPtr w, IntPtr l);
 }
 "@
     # maximise our window so the canvas renders at full size; the main handle can briefly be a helper window
@@ -68,6 +69,8 @@ public class PbiCap {
         [PbiCap]::GetWindowRect($p.MainWindowHandle, [ref]$r) | Out-Null
         if (($r.R - $r.L) -ge 800) { break }
     }
+    # close any slicer dropdown or menu left open: Escape goes to our window only, no global input
+    for ($k = 0; $k -lt 2; $k++) { [PbiCap]::PostMessage($p.MainWindowHandle, 0x100, [IntPtr]0x1B, [IntPtr]0) | Out-Null; [PbiCap]::PostMessage($p.MainWindowHandle, 0x101, [IntPtr]0x1B, [IntPtr]0) | Out-Null; Start-Sleep -Milliseconds 400 }
     Start-Sleep -Seconds 6
     if (($r.R - $r.L) -lt 800) { throw "our window is not showing the report (width $($r.R - $r.L))" }
     $bmp = New-Object System.Drawing.Bitmap ($r.R - $r.L), ($r.B - $r.T)

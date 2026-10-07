@@ -717,7 +717,9 @@ def header(page):
 
 
 def filters_row(page, insight_measure):
-    page.add("period", X0, 80, 180, 56, slicer("Date", "fiscal_year", "Fiscal year (Feb-Jan)", sync="period"))
+    # only fiscal years inside the data (FY2025-FY2027); the calendar table itself spans 2024-2027
+    page.add("period", X0, 80, 180, 56, slicer("Date", "fiscal_year", "Fiscal year (Feb-Jan)", sync="period"),
+             filters=[categorical_filter("Date", "is_in_analysis_period", ["true"], "inData")])
     page.add("segment", X0 + 196, 80, 180, 56, slicer("Customer", "segment", "Segment", sync="segment"))
     page.add("insight", X0 + 400, 84, W - 400, 48, insight(insight_measure))
 
