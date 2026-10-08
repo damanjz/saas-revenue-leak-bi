@@ -17,10 +17,19 @@ $meta = Get-Content $pj -Raw | ConvertFrom-Json; $meta.activePageName = $Page
 
 function Close-Own($proc) {
     # close only the window this script started (and its engine), then wait until it has really gone
-    Get-CimInstance Win32_Process -Filter "ParentProcessId=$($proc.Id)" | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+    $children = @(Get-CimInstance Win32_Process -Filter "ParentProcessId=$($proc.Id)")
+    # a force-closed window skips Power BI's own cleanup and leaves its workspace folder behind; note ours first
+    $workspaces = @($children | Where-Object { $_.Name -eq 'msmdsrv.exe' } | ForEach-Object {
+        if ($_.CommandLine -match '-s "([^"]+)\\Data"') { $Matches[1] } })
+    $children | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
     Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
     $proc.WaitForExit(30000) | Out-Null
     Start-Sleep -Seconds 3
+    foreach ($w in $workspaces) {
+        if ($w -like "$env:LOCALAPPDATA\Microsoft\Power BI Desktop\AnalysisServicesWorkspaces\AnalysisServicesWorkspace_*") {
+            Remove-Item -LiteralPath $w -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
 }
 
 $before = @(Get-Process msmdsrv -ErrorAction SilentlyContinue | ForEach-Object Id)
